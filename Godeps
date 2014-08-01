@@ -5,5 +5,32 @@
 		"github.com/modcloth-labs/tory",
 		"github.com/modcloth-labs/tory/tory"
 	],
-	"Deps": []
+	"Deps": [
+		{
+			"ImportPath": "github.com/Sirupsen/logrus",
+			"Comment": "v0.5.0",
+			"Rev": "d1c2d610bd8d921fcffc4791c204eafa634e2956"
+		},
+		{
+			"ImportPath": "github.com/codegangsta/cli",
+			"Comment": "1.0.0-72-gbb91895",
+			"Rev": "bb9189510af1f49580c073c9e59e8bf288f0df27"
+		},
+		{
+			"ImportPath": "github.com/codegangsta/negroni",
+			"Rev": "d41e937476d50d8c56f554aa149a6c5756baceb3"
+		},
+		{
+			"ImportPath": "github.com/gorilla/context",
+			"Rev": "1f3e8a46c5bb4c29971d9867ede6e198ca5eddce"
+		},
+		{
+			"ImportPath": "github.com/gorilla/mux",
+			"Rev": "136d54f81f00414c45c3c68dd47e98cc97519c5e"
+		},
+		{
+			"ImportPath": "github.com/meatballhat/negroni-logrus",
+			"Rev": "d5e114d7a445f7a3652cf807d3f83d5dceb8de26"
+		}
+	]
 }
