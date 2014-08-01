@@ -5,12 +5,9 @@ go:
 sudo: false
 env:
   global:
-  - GINKGO_FLAGS="-v --trace"
   - PATH=$HOME/gopath/bin:$PATH
 before_script:
 - go get github.com/tools/godep
-- go get github.com/onsi/ginkgo/ginkgo
-- go get github.com/onsi/gomega
 - go get code.google.com/p/go.tools/cmd/cover
 - godep restore
 - go install -a -race std
