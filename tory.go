@@ -11,6 +11,7 @@ import (
 func main() {
 	app := cli.NewApp()
 	app.Name = "tory"
+	app.Usage = "ansible inventory server"
 	app.Version = fmt.Sprintf("%s revision=%s", tory.VersionString, tory.RevisionString)
 	app.Flags = []cli.Flag{
 		cli.BoolFlag{
