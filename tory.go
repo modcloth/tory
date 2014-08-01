@@ -32,10 +32,16 @@ func main() {
 			Usage: "static file directory",
 			Value: tory.DefaultStaticDir,
 		},
+		cli.StringFlag{
+			Name:  "p, prefix",
+			Usage: "public api prefix",
+			Value: tory.DefaultPrefix,
+		},
 	}
 	app.Action = func(c *cli.Context) {
 		tory.ServerMain(c.String("server-addr"),
-			c.String("database-url"), c.String("static-dir"), c.Bool("verbose"))
+			c.String("database-url"), c.String("static-dir"),
+			c.String("prefix"), c.Bool("verbose"))
 	}
 
 	app.Run(os.Args)

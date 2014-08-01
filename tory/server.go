@@ -19,6 +19,9 @@ var (
 	// DefaultStaticDir is the default value for the static directory
 	DefaultStaticDir = os.Getenv("TORY_STATIC_DIR")
 
+	// DefaultPrefix is the default value for the public API prefix
+	DefaultPrefix = os.Getenv("TORY_PREFIX")
+
 	log = logrus.New()
 )
 
@@ -35,28 +38,36 @@ func init() {
 		DefaultStaticDir = "public"
 	}
 
+	if DefaultPrefix == "" {
+		DefaultPrefix = `/ansible/hosts`
+	}
+
 	expvarplus.EnvWhitelist = []string{
 		"TORY_ADDR",
+		"TORY_PREFIX",
 		"TORY_STATIC_DIR",
 		"DATABASE_URL",
 	}
 }
 
 // ServerMain is the whole shebang
-func ServerMain(addr, dbConnStr, staticDir string, verbose bool) {
+func ServerMain(addr, dbConnStr, staticDir, prefix string, verbose bool) {
 	os.Setenv("TORY_ADDR", addr)
 	os.Setenv("TORY_STATIC_DIR", staticDir)
+	os.Setenv("TORY_PREFIX", prefix)
 	os.Setenv("DATABASE_URL", dbConnStr)
 
 	srv, err := newServer(dbConnStr)
 	if err != nil {
 		log.WithFields(logrus.Fields{"err": err}).Fatal("failed to build server")
 	}
-	srv.Setup(staticDir, verbose)
+	srv.Setup(prefix, staticDir, verbose)
 	srv.Run(addr)
 }
 
 type server struct {
+	prefix string
+
 	log *logrus.Logger
 	d   *db
 	n   *negroni.Negroni
@@ -70,19 +81,31 @@ func newServer(dbConnStr string) (*server, error) {
 	}
 
 	srv := &server{
-		log: logrus.New(),
-		d:   d,
-		n:   negroni.New(),
-		r:   mux.NewRouter(),
+		prefix: `/ansible/hosts`,
+		log:    logrus.New(),
+		d:      d,
+		n:      negroni.New(),
+		r:      mux.NewRouter(),
 	}
 
 	return srv, nil
 }
 
-func (srv *server) Setup(staticDir string, verbose bool) {
+func (srv *server) Setup(prefix, staticDir string, verbose bool) {
+	srv.prefix = prefix
+
 	if verbose {
 		srv.log.Level = logrus.DebugLevel
 	}
+
+	srv.r.HandleFunc(srv.prefix, srv.getHostInventory).Methods("GET")
+	srv.r.HandleFunc(srv.prefix, srv.addHostToInventory).Methods("POST")
+	srv.r.HandleFunc(srv.prefix+`/{hostname}`, srv.getHost).Methods("GET")
+	srv.r.HandleFunc(srv.prefix+`/{hostname}`, srv.updateHost).Methods("PUT")
+	srv.r.HandleFunc(srv.prefix+`/{hostname}`, srv.deleteHost).Methods("DELETE")
+	srv.r.HandleFunc(srv.prefix+`/{hostname}/{key:.*}`, srv.getHostKey).Methods("GET")
+	srv.r.HandleFunc(srv.prefix+`/{hostname}/{key:.*}`, srv.updateHostKey).Methods("PUT")
+	srv.r.HandleFunc(srv.prefix+`/{hostname}/{key:.*}`, srv.deleteHostKey).Methods("DELETE")
 
 	srv.r.HandleFunc(`/ping`, srv.handlePing).Methods("GET", "HEAD")
 	srv.r.HandleFunc(`/debug/vars`, expvarplus.HandleExpvars).Methods("GET")
@@ -100,4 +123,36 @@ func (srv *server) Run(addr string) {
 func (srv *server) handlePing(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	fmt.Fprintf(w, "PONG\n")
+}
+
+func (srv *server) getHostInventory(w http.ResponseWriter, r *http.Request) {
+	http.Error(w, "NOPE, no inventory", http.StatusNotImplemented)
+}
+
+func (srv *server) addHostToInventory(w http.ResponseWriter, r *http.Request) {
+	http.Error(w, "NOPE, cannot add to inventory", http.StatusNotImplemented)
+}
+
+func (srv *server) getHost(w http.ResponseWriter, r *http.Request) {
+	http.Error(w, "NOPE, no host", http.StatusNotImplemented)
+}
+
+func (srv *server) updateHost(w http.ResponseWriter, r *http.Request) {
+	http.Error(w, "NOPE, cannot update host", http.StatusNotImplemented)
+}
+
+func (srv *server) deleteHost(w http.ResponseWriter, r *http.Request) {
+	http.Error(w, "NOPE, cannot delete host", http.StatusNotImplemented)
+}
+
+func (srv *server) getHostKey(w http.ResponseWriter, r *http.Request) {
+	http.Error(w, "NOPE, no host key", http.StatusNotImplemented)
+}
+
+func (srv *server) updateHostKey(w http.ResponseWriter, r *http.Request) {
+	http.Error(w, "NOPE, no host key", http.StatusNotImplemented)
+}
+
+func (srv *server) deleteHostKey(w http.ResponseWriter, r *http.Request) {
+	http.Error(w, "NOPE, cannot delete host key", http.StatusNotImplemented)
 }
