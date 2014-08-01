@@ -15,14 +15,13 @@ GENERATED_VALUE := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 
 GO ?= go
 GODEP ?= godep
-GINKGO ?= ginkgo
 GOBUILD_LDFLAGS := -ldflags "\
   -X $(VERSION_VAR) $(VERSION_VALUE) \
   -X $(REV_VAR) $(REV_VALUE) \
   -X $(BRANCH_VAR) $(BRANCH_VALUE) \
   -X $(GENERATED_VAR) $(GENERATED_VALUE)"
 GOBUILD_FLAGS ?=
-GINKGO_FLAGS ?=
+GOTEST_FLAGS ?= -race -v
 
 .PHONY: all
 all: clean build test save
@@ -40,16 +39,30 @@ deps:
 test: build test-deps .test
 
 .PHONY: .test
-.test:
-	$(GINKGO) $(GINKGO_FLAGS) -r --randomizeAllSpecs --failOnPending --cover --race
+.test: coverage.html
+
+coverage.html: all.coverprofile
+	$(GO) tool cover -html=$< -o $@
+
+all.coverprofile: main.coverprofile tory.coverprofile
+	echo 'mode: count' > $@
+	grep -h -v 'mode: count' $^ >> $@
+
+main.coverprofile:
+	$(GO) test $(GOTEST_FLAGS) $(GOBUILD_LDFLAGS) \
+	  -coverprofile=$@ -covermode=count $(PACKAGE)
+
+tory.coverprofile:
+	$(GO) test $(GOTEST_FLAGS) $(GOBUILD_LDFLAGS) \
+	  -coverprofile=$@ -covermode=count $(SUBPACKAGES)
 
 .PHONY: test-deps
 test-deps:
-	$(GO) test -i $(GOBUILD_LDFLAGS) $(PACKAGE) $(SUBPACKAGES)
+	$(GO) test -i $(GOTEST_FLAGS) $(GOBUILD_LDFLAGS) $(PACKAGE) $(SUBPACKAGES)
 
 .PHONY: clean
 clean:
-	$(RM) $${GOPATH%%:*}/bin/tory
+	$(RM) $${GOPATH%%:*}/bin/tory *.coverprofile coverage.html
 	$(GO) clean -x $(PACKAGE) $(SUBPACKAGES)
 
 .PHONY: save
