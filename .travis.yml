@@ -6,10 +6,15 @@ sudo: false
 env:
   global:
   - PATH=$HOME/gopath/bin:$PATH
-before_script:
+  - DATABASE_URL=postgres://postgres@localhost:5432/travis
+addons:
+  postgresql: '9.3'
+before_install:
 - go get github.com/tools/godep
 - go get code.google.com/p/go.tools/cmd/cover
 - godep restore
 - go install -a -race std
+before_script:
+- createdb -U postgres travis
 notifications:
   email: github+tory@modcloth.com

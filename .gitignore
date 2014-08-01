@@ -24,3 +24,5 @@ _testmain.go
 
 *.coverprofile
 coverage.html
+
+gin-bin

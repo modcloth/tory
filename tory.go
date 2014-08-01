@@ -18,13 +18,24 @@ func main() {
 			Usage: "be noisy",
 		},
 		cli.StringFlag{
-			Name:  "a, addr",
+			Name:  "a, server-addr",
 			Usage: "server address",
 			Value: tory.DefaultServerAddr,
 		},
+		cli.StringFlag{
+			Name:  "d, database-url",
+			Usage: "database connection uri",
+			Value: tory.DefaultDatabaseURL,
+		},
+		cli.StringFlag{
+			Name:  "s, static-dir",
+			Usage: "static file directory",
+			Value: tory.DefaultStaticDir,
+		},
 	}
-	app.Action = func(ctx *cli.Context) {
-		tory.ServerMain(ctx.String("addr"), ctx.Bool("verbose"))
+	app.Action = func(c *cli.Context) {
+		tory.ServerMain(c.String("server-addr"),
+			c.String("database-url"), c.String("static-dir"), c.Bool("verbose"))
 	}
 
 	app.Run(os.Args)
