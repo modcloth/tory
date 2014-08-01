@@ -22,7 +22,7 @@ var (
 	// DefaultPrefix is the default value for the public API prefix
 	DefaultPrefix = os.Getenv("TORY_PREFIX")
 
-	log = logrus.New()
+	toryLog = logrus.New()
 )
 
 func init() {
@@ -59,7 +59,7 @@ func ServerMain(addr, dbConnStr, staticDir, prefix string, verbose bool) {
 
 	srv, err := newServer(dbConnStr)
 	if err != nil {
-		log.WithFields(logrus.Fields{"err": err}).Fatal("failed to build server")
+		toryLog.WithFields(logrus.Fields{"err": err}).Fatal("failed to build server")
 	}
 	srv.Setup(prefix, staticDir, verbose)
 	srv.Run(addr)
@@ -69,13 +69,18 @@ type server struct {
 	prefix string
 
 	log *logrus.Logger
-	d   *db
+	db  *database
 	n   *negroni.Negroni
 	r   *mux.Router
 }
 
 func newServer(dbConnStr string) (*server, error) {
-	d, err := newDB(dbConnStr)
+	db, err := newDatabase(dbConnStr, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	err = db.Setup()
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +88,7 @@ func newServer(dbConnStr string) (*server, error) {
 	srv := &server{
 		prefix: `/ansible/hosts`,
 		log:    logrus.New(),
-		d:      d,
+		db:     db,
 		n:      negroni.New(),
 		r:      mux.NewRouter(),
 	}
