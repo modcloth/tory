@@ -1,0 +1,4 @@
+tory
+====
+
+Ansible inventory server
