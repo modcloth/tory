@@ -1,6 +1,7 @@
 package tory
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -52,6 +53,11 @@ func init() {
 
 // ServerMain is the whole shebang
 func ServerMain(addr, dbConnStr, staticDir, prefix string, verbose bool) {
+	srv := buildServer(addr, dbConnStr, staticDir, prefix, verbose)
+	srv.Run(addr)
+}
+
+func buildServer(addr, dbConnStr, staticDir, prefix string, verbose bool) *server {
 	os.Setenv("TORY_ADDR", addr)
 	os.Setenv("TORY_STATIC_DIR", staticDir)
 	os.Setenv("TORY_PREFIX", prefix)
@@ -62,7 +68,7 @@ func ServerMain(addr, dbConnStr, staticDir, prefix string, verbose bool) {
 		toryLog.WithFields(logrus.Fields{"err": err}).Fatal("failed to build server")
 	}
 	srv.Setup(prefix, staticDir, verbose)
-	srv.Run(addr)
+	return srv
 }
 
 type server struct {
@@ -125,13 +131,30 @@ func (srv *server) Run(addr string) {
 	srv.n.Run(addr)
 }
 
+func (srv *server) sendError(w http.ResponseWriter, err error, status int) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(status)
+	fmt.Fprintf(w, `{"error":%q}`, err.Error())
+}
+
 func (srv *server) handlePing(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, "PONG\n")
 }
 
 func (srv *server) getHostInventory(w http.ResponseWriter, r *http.Request) {
-	http.Error(w, "NOPE, no inventory", http.StatusNotImplemented)
+	inventory := map[string]interface{}{}
+	inventory["_meta"] = newMeta()
+
+	jsonBytes, err := json.MarshalIndent(inventory, "", "    ")
+	if err != nil {
+		srv.sendError(w, err, http.StatusInternalServerError)
+	}
+
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, string(jsonBytes)+"\n")
 }
 
 func (srv *server) addHostToInventory(w http.ResponseWriter, r *http.Request) {
