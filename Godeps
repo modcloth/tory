@@ -12,6 +12,11 @@
 			"Rev": "d1c2d610bd8d921fcffc4791c204eafa634e2956"
 		},
 		{
+			"ImportPath": "github.com/bitly/go-simplejson",
+			"Comment": "v0.4.3-28-g3378bdc",
+			"Rev": "3378bdcb5cebedcbf8b5750edee28010f128fe24"
+		},
+		{
 			"ImportPath": "github.com/codegangsta/cli",
 			"Comment": "1.0.0-72-gbb91895",
 			"Rev": "bb9189510af1f49580c073c9e59e8bf288f0df27"

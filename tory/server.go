@@ -137,6 +137,17 @@ func (srv *server) sendError(w http.ResponseWriter, err error, status int) {
 	fmt.Fprintf(w, `{"error":%q}`, err.Error())
 }
 
+func (srv *server) sendJSON(w http.ResponseWriter, j interface{}, status int) {
+	jsonBytes, err := json.MarshalIndent(j, "", "    ")
+	if err != nil {
+		srv.sendError(w, err, http.StatusInternalServerError)
+	}
+
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, string(jsonBytes)+"\n")
+}
+
 func (srv *server) handlePing(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
@@ -146,15 +157,7 @@ func (srv *server) handlePing(w http.ResponseWriter, r *http.Request) {
 func (srv *server) getHostInventory(w http.ResponseWriter, r *http.Request) {
 	inventory := map[string]interface{}{}
 	inventory["_meta"] = newMeta()
-
-	jsonBytes, err := json.MarshalIndent(inventory, "", "    ")
-	if err != nil {
-		srv.sendError(w, err, http.StatusInternalServerError)
-	}
-
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, string(jsonBytes)+"\n")
+	srv.sendJSON(w, inventory, http.StatusOK)
 }
 
 func (srv *server) addHostToInventory(w http.ResponseWriter, r *http.Request) {
