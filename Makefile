@@ -44,6 +44,7 @@ test: build test-deps .test
 .test: coverage.html
 
 coverage.html: all.coverprofile
+	$(GO) tool cover -func=$<
 	$(GO) tool cover -html=$< -o $@
 
 all.coverprofile: main.coverprofile tory.coverprofile
