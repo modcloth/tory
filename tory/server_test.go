@@ -2,7 +2,6 @@ package tory
 
 import (
 	"bytes"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -14,12 +13,11 @@ import (
 	"time"
 
 	"github.com/bitly/go-simplejson"
-	"github.com/lib/pq/hstore"
 )
 
 var (
 	testServer         *server
-	testHost           *host
+	testHost           *hostJSON
 	testHostJSONReader io.Reader
 )
 
@@ -29,30 +27,25 @@ func init() {
 	testServer = buildServer(":9999", os.Getenv("DATABASE_URL"),
 		"public", `/ansible/hosts/test`, false)
 
-	testHost = &host{
+	testHost = &hostJSON{
 		Name:    fmt.Sprintf("test%d.example.com", rand.Intn(255)),
 		IP:      fmt.Sprintf("10.10.1.%d", rand.Intn(255)),
-		Package: sql.NullString{String: "fancy-town-80", Valid: true},
-		Image:   sql.NullString{String: "ubuntu-14.04", Valid: true},
-		Type:    sql.NullString{String: "virtualmachine", Valid: true},
-		Tags: &hstore.Hstore{
-			Map: map[string]sql.NullString{
-				"team":        sql.NullString{String: "fribbles", Valid: true},
-				"env":         sql.NullString{String: "prod", Valid: true},
-				"role":        sql.NullString{String: "job", Valid: true},
-				"provisioner": sql.NullString{String: "p.freely", Valid: true},
-			},
+		Package: "fancy-town-80",
+		Image:   "ubuntu-14.04",
+		Type:    "virtualmachine",
+		Tags: map[string]interface{}{
+			"team":        "fribbles",
+			"env":         "prod",
+			"role":        "job",
+			"provisioner": "p.freely",
 		},
-		Attrs: &hstore.Hstore{
-			Map: map[string]sql.NullString{
-				"memory": sql.NullString{String: "512", Valid: true},
-				"disk":   sql.NullString{String: "16384", Valid: true},
-			},
+		Attrs: map[string]interface{}{
+			"memory": "512",
+			"disk":   "16384",
 		},
-		Modified: time.Now().UTC(),
 	}
 
-	testHostJSONBytes, err := json.Marshal(map[string]*host{"host": testHost})
+	testHostJSONBytes, err := json.Marshal(map[string]*hostJSON{"host": testHost})
 	if err != nil {
 		panic(err)
 	}
@@ -176,6 +169,27 @@ func TestHandleAddHostToInventory(t *testing.T) {
 	}
 
 	hasIP := false
+	for _, ip := range ips {
+		if ip == testHost.IP {
+			hasIP = true
+		}
+	}
+
+	if !hasIP {
+		t.Fatalf("test host ip %q not in tag team group", testHost.IP)
+	}
+
+	typeGroup, ok := j.CheckGet(fmt.Sprintf("type_virtualmachine"))
+	if !ok {
+		t.Fatalf("response does not contain type group")
+	}
+
+	ips, err = typeGroup.StringArray()
+	if err != nil {
+		t.Fatalf("failed to get ip addresses in type group")
+	}
+
+	hasIP = false
 	for _, ip := range ips {
 		if ip == testHost.IP {
 			hasIP = true

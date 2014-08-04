@@ -172,6 +172,19 @@ func (srv *server) getHostInventory(w http.ResponseWriter, r *http.Request) {
 	for _, host := range hosts {
 		inv.AddIPToGroupUnsanitized(host.Name, host.IP)
 
+		if host.Type.String != "" {
+			switch host.Type.String {
+			case "smartmachine":
+				inv.Meta.AddHostvar(host.IP,
+					"ansible_python_interpreter", "/opt/local/bin/python")
+			case "virtualmachine":
+				inv.Meta.AddHostvar(host.IP,
+					"ansible_python_interpreter", "/usr/bin/python")
+			}
+
+			inv.AddIPToGroup(fmt.Sprintf("type_%s", host.Type.String), host.IP)
+		}
+
 		if host.Tags != nil && host.Tags.Map != nil {
 			for key, value := range host.Tags.Map {
 				if value.String == "" {
@@ -193,33 +206,35 @@ func (srv *server) addHostToInventory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hostJSON, ok := j.CheckGet("host")
+	hjJSON, ok := j.CheckGet("host")
 	if !ok {
 		srv.sendError(w, missingHostsError, http.StatusBadRequest)
 		return
 	}
 
-	hostBytes, err := hostJSON.MarshalJSON()
+	hostBytes, err := hjJSON.MarshalJSON()
 	if err != nil {
 		srv.sendError(w, err, http.StatusBadRequest)
 		return
 	}
 
-	h := newHost()
-	err = json.Unmarshal(hostBytes, h)
+	hj := newHostJSON()
+	err = json.Unmarshal(hostBytes, hj)
 	if err != nil {
 		srv.sendError(w, err, http.StatusBadRequest)
 		return
 	}
 
+	h := hostJSONToHost(hj)
 	err = srv.db.CreateHost(h)
 	if err != nil {
 		srv.sendError(w, err, http.StatusBadRequest)
 		return
 	}
 
-	w.Header().Set("Location", srv.prefix+"/"+h.Name)
-	srv.sendJSON(w, map[string]*host{"host": h}, http.StatusCreated)
+	hj.ID = h.ID
+	w.Header().Set("Location", srv.prefix+"/"+hj.Name)
+	srv.sendJSON(w, map[string]*hostJSON{"host": hj}, http.StatusCreated)
 }
 
 func (srv *server) getHost(w http.ResponseWriter, r *http.Request) {
