@@ -93,11 +93,6 @@ func newServer(dbConnStr string) (*server, error) {
 		return nil, err
 	}
 
-	err = db.Setup()
-	if err != nil {
-		return nil, err
-	}
-
 	srv := &server{
 		prefix: `/ansible/hosts`,
 		log:    logrus.New(),
