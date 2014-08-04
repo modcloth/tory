@@ -51,10 +51,13 @@ func init() {
 	}
 
 	expvarplus.EnvWhitelist = []string{
+		"DATABASE_URL",
+		"PORT",
+		"QUIET",
 		"TORY_ADDR",
 		"TORY_PREFIX",
 		"TORY_STATIC_DIR",
-		"DATABASE_URL",
+		"VERBOSE",
 	}
 }
 
