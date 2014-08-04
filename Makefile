@@ -1,4 +1,4 @@
-PACKAGE := github.com/modcloth-labs/tory
+PACKAGE := github.com/modcloth/tory
 SUBPACKAGES := $(PACKAGE)/tory
 
 VERSION_VAR := $(PACKAGE)/tory.VersionString
@@ -33,7 +33,6 @@ build: deps
 .PHONY: deps
 deps:
 	$(GODEP) restore
-	$(GO) get github.com/modcloth-labs/json-server
 
 .PHONY: test
 test: build test-deps .test

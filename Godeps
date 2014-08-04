@@ -1,9 +1,9 @@
 {
-	"ImportPath": "github.com/modcloth-labs/tory",
+	"ImportPath": "github.com/modcloth/tory",
 	"GoVersion": "go1.3",
 	"Packages": [
-		"github.com/modcloth-labs/tory",
-		"github.com/modcloth-labs/tory/tory"
+		"github.com/modcloth/tory",
+		"github.com/modcloth/tory/tory"
 	],
 	"Deps": [
 		{

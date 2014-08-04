@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/codegangsta/cli"
-	"github.com/modcloth-labs/tory/tory"
+	"github.com/modcloth/tory/tory"
 )
 
 func main() {
