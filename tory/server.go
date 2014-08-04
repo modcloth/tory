@@ -172,15 +172,23 @@ func (srv *server) getHostInventory(w http.ResponseWriter, r *http.Request) {
 		srv.sendError(w, err, http.StatusInternalServerError)
 		return
 	}
-	srv.log.WithFields(logrus.Fields{"hosts": hosts}).Info("raw hosts")
 
-	inventory := map[string]interface{}{}
-	inventory["_meta"] = newMeta()
+	inv := newInventory()
 	for _, host := range hosts {
-		inventory[host.Name] = []string{host.IP}
+		inv.AddIPToGroupUnsanitized(host.Name, host.IP)
+
+		if host.Tags != nil && host.Tags.Map != nil {
+			for key, value := range host.Tags.Map {
+				if value.String == "" {
+					continue
+				}
+				invKey := fmt.Sprintf("tag_%s_%s", key, value.String)
+				inv.AddIPToGroup(invKey, host.IP)
+			}
+		}
 	}
 
-	srv.sendJSON(w, inventory, http.StatusOK)
+	srv.sendJSON(w, inv, http.StatusOK)
 }
 
 func (srv *server) addHostToInventory(w http.ResponseWriter, r *http.Request) {
