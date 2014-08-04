@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/jmoiron/sqlx"
 	"github.com/modcloth-labs/schema_ensurer"
 	// register the pq stuff
@@ -48,6 +49,7 @@ func init() {
 type database struct {
 	conn *sqlx.DB
 	l    *log.Logger
+	log  *logrus.Logger
 
 	Migrations map[string][]string
 }
@@ -62,6 +64,7 @@ func newDatabase(urlString string, migrations map[string][]string) (*database, e
 		conn:       conn,
 		Migrations: migrations,
 		l:          log.New(os.Stderr, "", log.LstdFlags),
+		log:        logrus.New(),
 	}
 
 	if db.Migrations == nil {
@@ -71,15 +74,61 @@ func newDatabase(urlString string, migrations map[string][]string) (*database, e
 	return db, nil
 }
 
-func (db *database) CreateHost(host *host) error {
-	return nil
+func (db *database) CreateHost(h *host) error {
+	tx, err := db.conn.Beginx()
+	if err != nil {
+		return err
+	}
+
+	rows, err := tx.NamedQuery(`
+		INSERT INTO hosts (name, package, image, type, ip, tags, attrs) 
+		VALUES (:name, :package, :image, :type, :ip, :tags, :attrs)
+		RETURNING id`, h)
+	if err != nil {
+		defer tx.Rollback()
+		return err
+	}
+
+	for rows.Next() {
+		err = rows.StructScan(h)
+		if err != nil {
+			db.log.WithFields(logrus.Fields{"err": err}).Error("failed to scan struct")
+			return tx.Rollback()
+		}
+	}
+
+	db.log.WithFields(logrus.Fields{"host": h}).Info("created host")
+	return tx.Commit()
 }
 
 func (db *database) ReadHost(name, ip string) (*host, error) {
 	return nil, nil
 }
 
-func (db *database) UpdateHost(host *host) error {
+func (db *database) ReadAllHosts() ([]*host, error) {
+	rows, err := db.conn.Queryx(`SELECT * FROM hosts`)
+	if err != nil {
+		return nil, err
+	}
+
+	hosts := []*host{}
+	count := 0
+	for rows.Next() {
+		h := newHost()
+		err = rows.StructScan(h)
+		if err != nil {
+			db.log.WithFields(logrus.Fields{"err": err}).Error("failed to scan struct")
+			return nil, err
+		}
+		hosts = append(hosts, h)
+		count++
+	}
+
+	db.log.WithFields(logrus.Fields{"count": count}).Info("returning all hosts")
+	return hosts, nil
+}
+
+func (db *database) UpdateHost(h *host) error {
 	return nil
 }
 

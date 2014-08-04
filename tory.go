@@ -42,7 +42,7 @@ func main() {
 	app.Action = func(c *cli.Context) {
 		tory.ServerMain(c.String("server-addr"),
 			c.String("database-url"), c.String("static-dir"),
-			c.String("prefix"), c.Bool("verbose"))
+			c.String("prefix"), (c.Bool("verbose") || os.Getenv("VERBOSE") != ""))
 	}
 
 	app.Run(os.Args)

@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/bitly/go-simplejson"
 	"github.com/codegangsta/negroni"
 	"github.com/gorilla/mux"
 	"github.com/meatballhat/negroni-logrus"
@@ -24,6 +25,8 @@ var (
 	DefaultPrefix = os.Getenv("TORY_PREFIX")
 
 	toryLog = logrus.New()
+
+	missingHostsError = fmt.Errorf("missing \"hosts\" key")
 )
 
 func init() {
@@ -41,6 +44,10 @@ func init() {
 
 	if DefaultPrefix == "" {
 		DefaultPrefix = `/ansible/hosts`
+	}
+
+	if os.Getenv("QUIET") != "" {
+		toryLog.Level = logrus.FatalLevel
 	}
 
 	expvarplus.EnvWhitelist = []string{
@@ -109,6 +116,10 @@ func (srv *server) Setup(prefix, staticDir string, verbose bool) {
 		srv.log.Level = logrus.DebugLevel
 	}
 
+	if os.Getenv("QUIET") != "" {
+		srv.log.Level = logrus.FatalLevel
+	}
+
 	srv.r.HandleFunc(srv.prefix, srv.getHostInventory).Methods("GET")
 	srv.r.HandleFunc(srv.prefix, srv.addHostToInventory).Methods("POST")
 	srv.r.HandleFunc(srv.prefix+`/{hostname}`, srv.getHost).Methods("GET")
@@ -132,6 +143,7 @@ func (srv *server) Run(addr string) {
 }
 
 func (srv *server) sendError(w http.ResponseWriter, err error, status int) {
+	srv.log.WithFields(logrus.Fields{"err": err, "status": status}).Error("returning HTTP error")
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)
 	fmt.Fprintf(w, `{"error":%q}`, err.Error())
@@ -144,7 +156,7 @@ func (srv *server) sendJSON(w http.ResponseWriter, j interface{}, status int) {
 	}
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(status)
 	fmt.Fprintf(w, string(jsonBytes)+"\n")
 }
 
@@ -155,13 +167,56 @@ func (srv *server) handlePing(w http.ResponseWriter, r *http.Request) {
 }
 
 func (srv *server) getHostInventory(w http.ResponseWriter, r *http.Request) {
+	hosts, err := srv.db.ReadAllHosts()
+	if err != nil {
+		srv.sendError(w, err, http.StatusInternalServerError)
+		return
+	}
+	srv.log.WithFields(logrus.Fields{"hosts": hosts}).Info("raw hosts")
+
 	inventory := map[string]interface{}{}
 	inventory["_meta"] = newMeta()
+	for _, host := range hosts {
+		inventory[host.Name] = []string{host.IP}
+	}
+
 	srv.sendJSON(w, inventory, http.StatusOK)
 }
 
 func (srv *server) addHostToInventory(w http.ResponseWriter, r *http.Request) {
-	http.Error(w, "NOPE, cannot add to inventory", http.StatusNotImplemented)
+	j, err := simplejson.NewFromReader(r.Body)
+	if err != nil {
+		srv.sendError(w, err, http.StatusBadRequest)
+		return
+	}
+
+	hostJSON, ok := j.CheckGet("host")
+	if !ok {
+		srv.sendError(w, missingHostsError, http.StatusBadRequest)
+		return
+	}
+
+	hostBytes, err := hostJSON.MarshalJSON()
+	if err != nil {
+		srv.sendError(w, err, http.StatusBadRequest)
+		return
+	}
+
+	h := newHost()
+	err = json.Unmarshal(hostBytes, h)
+	if err != nil {
+		srv.sendError(w, err, http.StatusBadRequest)
+		return
+	}
+
+	err = srv.db.CreateHost(h)
+	if err != nil {
+		srv.sendError(w, err, http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Location", srv.prefix+"/"+h.Name)
+	srv.sendJSON(w, map[string]*host{"host": h}, http.StatusCreated)
 }
 
 func (srv *server) getHost(w http.ResponseWriter, r *http.Request) {
