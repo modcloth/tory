@@ -13,6 +13,9 @@ BRANCH_VALUE := $(shell git rev-parse --abbrev-ref HEAD)
 GENERATED_VAR := $(PACKAGE)/tory.GeneratedString
 GENERATED_VALUE := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 
+DATABASE_URL ?= postgres://localhost/tory?sslmode=disable
+export DATABASE_URL
+
 GO ?= go
 GODEP ?= godep
 GOBUILD_LDFLAGS := -ldflags "\
@@ -24,7 +27,7 @@ GOBUILD_FLAGS ?=
 GOTEST_FLAGS ?= -race -v
 
 .PHONY: all
-all: clean build test save
+all: clean build migrate test save
 
 .PHONY: build
 build: deps
@@ -54,6 +57,10 @@ main.coverprofile:
 tory.coverprofile:
 	$(GO) test $(GOTEST_FLAGS) $(GOBUILD_LDFLAGS) \
 	  -coverprofile=$@ -covermode=count $(SUBPACKAGES)
+
+.PHONY: migrate
+migrate: build
+	$${GOPATH%%:*}/bin/tory migrate -d $(DATABASE_URL)
 
 .PHONY: test-deps
 test-deps:
