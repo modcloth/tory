@@ -185,6 +185,12 @@ func (srv *server) getHostInventory(w http.ResponseWriter, r *http.Request) {
 			inv.AddIPToGroup(fmt.Sprintf("type_%s", host.Type.String), host.IP.Addr)
 		}
 
+		if r.FormValue("exclude-vars") == "" {
+			for key, value := range host.CollapsedVars() {
+				inv.Meta.AddHostvar(host.IP.Addr, key, value)
+			}
+		}
+
 		if host.Tags != nil && host.Tags.Map != nil {
 			for key, value := range host.Tags.Map {
 				if value.String == "" {
@@ -238,7 +244,22 @@ func (srv *server) addHostToInventory(w http.ResponseWriter, r *http.Request) {
 }
 
 func (srv *server) getHost(w http.ResponseWriter, r *http.Request) {
-	http.Error(w, "NOPE, no host", http.StatusNotImplemented)
+	vars := mux.Vars(r)
+	h, err := srv.db.ReadHost(vars["hostname"])
+	srv.log.WithFields(logrus.Fields{"host": h}).Info("got back the host")
+	if err != nil {
+		srv.sendError(w, err, http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Location", srv.prefix+"/"+h.Name)
+	srv.log.Info("sending back some json now")
+
+	if r.FormValue("vars-only") != "" {
+		srv.sendJSON(w, h.CollapsedVars(), http.StatusOK)
+	} else {
+		srv.sendJSON(w, map[string]*hostJSON{"host": hostToHostJSON(h)}, http.StatusOK)
+	}
 }
 
 func (srv *server) updateHost(w http.ResponseWriter, r *http.Request) {

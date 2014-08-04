@@ -1,6 +1,7 @@
 package tory
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -38,6 +39,8 @@ var (
 			`CREATE INDEX hosts_vars_idx ON hosts USING GIN (vars)`,
 		},
 	}
+
+	missingHostError = fmt.Errorf("no such host")
 )
 
 func init() {
@@ -101,8 +104,19 @@ func (db *database) CreateHost(h *host) error {
 	return tx.Commit()
 }
 
-func (db *database) ReadHost(name, ip string) (*host, error) {
-	return nil, nil
+func (db *database) ReadHost(identifier string) (*host, error) {
+	row := db.conn.QueryRowx(`SELECT * FROM hosts WHERE name = $1 OR ip::text = $1`, identifier)
+	if row == nil {
+		return nil, missingHostError
+	}
+
+	h := newHost()
+	err := row.StructScan(h)
+	if err != nil {
+		return nil, err
+	}
+
+	return h, nil
 }
 
 func (db *database) ReadAllHosts() ([]*host, error) {

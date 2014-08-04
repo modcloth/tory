@@ -16,9 +16,7 @@ import (
 )
 
 var (
-	testServer         *server
-	testHost           *hostJSON
-	testHostJSONReader io.Reader
+	testServer *server
 )
 
 func init() {
@@ -27,8 +25,11 @@ func init() {
 	testServer = buildServer(":9999", os.Getenv("DATABASE_URL"),
 		"public", `/ansible/hosts/test`, false)
 
-	testHost = &hostJSON{
-		Name:    fmt.Sprintf("test%d.example.com", rand.Intn(255)),
+}
+
+func getTestHostJSONReader() (*hostJSON, io.Reader) {
+	testHost := &hostJSON{
+		Name:    fmt.Sprintf("test%d.example.com", rand.Intn(16384)),
 		IP:      fmt.Sprintf("10.10.1.%d", rand.Intn(255)),
 		Package: "fancy-town-80",
 		Image:   "ubuntu-14.04",
@@ -50,7 +51,7 @@ func init() {
 		panic(err)
 	}
 
-	testHostJSONReader = bytes.NewReader(testHostJSONBytes)
+	return testHost, bytes.NewReader(testHostJSONBytes)
 }
 
 func makeRequest(method, urlStr string, body io.Reader) *httptest.ResponseRecorder {
@@ -109,7 +110,8 @@ func TestHandleGetHostInventory(t *testing.T) {
 }
 
 func TestHandleAddHostToInventory(t *testing.T) {
-	w := makeRequest("POST", `/ansible/hosts/test`, testHostJSONReader)
+	h, reader := getTestHostJSONReader()
+	w := makeRequest("POST", `/ansible/hosts/test`, reader)
 	if w.Code != 201 {
 		t.Fatalf("response code is not 201: %v", w.Code)
 	}
@@ -140,8 +142,8 @@ func TestHandleAddHostToInventory(t *testing.T) {
 		return
 	}
 
-	if hostnameString != testHost.Name {
-		t.Fatalf("returned hostname does not match: %v != %v", hostname, testHost.Name)
+	if hostnameString != h.Name {
+		t.Fatalf("returned hostname does not match: %v != %v", hostname, h.Name)
 	}
 
 	w = makeRequest("GET", `/ansible/hosts/test`, nil)
@@ -154,7 +156,7 @@ func TestHandleAddHostToInventory(t *testing.T) {
 		t.Fatalf("response is not json: %v", w.Body.String())
 	}
 
-	if _, ok := j.CheckGet(testHost.Name); !ok {
+	if _, ok := j.CheckGet(h.Name); !ok {
 		t.Fatalf("response does not contain host name as group")
 	}
 
@@ -170,13 +172,13 @@ func TestHandleAddHostToInventory(t *testing.T) {
 
 	hasIP := false
 	for _, ip := range ips {
-		if ip == testHost.IP {
+		if ip == h.IP {
 			hasIP = true
 		}
 	}
 
 	if !hasIP {
-		t.Fatalf("test host ip %q not in tag team group", testHost.IP)
+		t.Fatalf("test host ip %q not in tag team group", h.IP)
 	}
 
 	typeGroup, ok := j.CheckGet(fmt.Sprintf("type_virtualmachine"))
@@ -191,12 +193,80 @@ func TestHandleAddHostToInventory(t *testing.T) {
 
 	hasIP = false
 	for _, ip := range ips {
-		if ip == testHost.IP {
+		if ip == h.IP {
 			hasIP = true
 		}
 	}
 
 	if !hasIP {
-		t.Fatalf("test host ip %q not in tag team group", testHost.IP)
+		t.Fatalf("test host ip %q not in tag team group", h.IP)
+	}
+}
+
+func TestHandleGetHost(t *testing.T) {
+	h, reader := getTestHostJSONReader()
+
+	w := makeRequest("POST", `/ansible/hosts/test`, reader)
+	if w.Code != 201 {
+		t.Fatalf("response code is not 201: %v", w.Code)
+	}
+
+	w = makeRequest("GET", `/ansible/hosts/test/`+h.Name, nil)
+	if w.Code != 200 {
+		t.Fatalf("response code is not 200: %v", w.Code)
+	}
+
+	j, err := simplejson.NewFromReader(w.Body)
+	if err != nil {
+		t.Fatalf("response is not json: %v", w.Body.String())
+	}
+
+	hjJSON, ok := j.CheckGet("host")
+	if !ok {
+		t.Fatalf("body does not contain \"host\"")
+	}
+
+	hj := newHostJSON()
+	hjBytes, err := hjJSON.MarshalJSON()
+	if err != nil {
+		t.Error(err)
+	}
+
+	err = json.Unmarshal(hjBytes, hj)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if hj.IP != h.IP {
+		t.Fatalf("outgoing ip addr does not match: %s != %s", hj.IP, h.IP)
+	}
+
+	w = makeRequest("GET", `/ansible/hosts/test/`+h.Name+`?vars-only=1`, nil)
+	if w.Code != 200 {
+		t.Fatalf("response code is not 200: %v", w.Code)
+	}
+
+	j, err = simplejson.NewFromReader(w.Body)
+	if err != nil {
+		t.Fatalf("response is not json: %v", w.Body.String())
+	}
+
+	_, ok = j.CheckGet("host")
+	if ok {
+		t.Fatalf("body does contains \"host\"")
+	}
+
+	team, ok := j.CheckGet("team")
+	if !ok {
+		t.Fatalf("body does not contain \"team\"")
+	}
+
+	teamStr, err := team.String()
+	if err != nil {
+		t.Error(err)
+	}
+
+	if teamStr != h.Tags["team"] {
+		t.Fatalf("outgoing team does not match: %s != !s", teamStr, h.Tags["team"])
 	}
 }
