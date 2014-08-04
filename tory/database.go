@@ -25,9 +25,9 @@ var (
 				package varchar(255),
 				image varchar(255),
 				type varchar(255),
-				ip varchar(15) NOT NULL,
+				ip inet NOT NULL,
 				tags hstore,
-				attrs hstore,
+				vars hstore,
 				modified timestamp DEFAULT current_timestamp
 			)`,
 			`CREATE INDEX hosts_package_idx ON hosts (package)`,
@@ -35,7 +35,7 @@ var (
 			`CREATE INDEX hosts_type_idx ON hosts (type)`,
 			`CREATE INDEX hosts_ip_idx ON hosts (ip)`,
 			`CREATE INDEX hosts_tags_idx ON hosts USING GIN (tags)`,
-			`CREATE INDEX hosts_attrs_idx ON hosts USING GIN (attrs)`,
+			`CREATE INDEX hosts_vars_idx ON hosts USING GIN (vars)`,
 		},
 	}
 )
@@ -81,8 +81,8 @@ func (db *database) CreateHost(h *host) error {
 	}
 
 	rows, err := tx.NamedQuery(`
-		INSERT INTO hosts (name, package, image, type, ip, tags, attrs) 
-		VALUES (:name, :package, :image, :type, :ip, :tags, :attrs)
+		INSERT INTO hosts (name, package, image, type, ip, tags, vars) 
+		VALUES (:name, :package, :image, :type, :ip, :tags, :vars)
 		RETURNING id`, h)
 	if err != nil {
 		defer tx.Rollback()

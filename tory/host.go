@@ -12,14 +12,14 @@ type host struct {
 	ID int64 `db:"id"`
 
 	Name string `db:"name"`
-	IP   string `db:"ip"`
+	IP   *inet  `db:"ip"`
 
 	Package sql.NullString `db:"package"`
 	Image   sql.NullString `db:"image"`
 	Type    sql.NullString `db:"type"`
 
-	Tags  *hstore.Hstore `db:"tags"`
-	Attrs *hstore.Hstore `db:"attrs"`
+	Tags *hstore.Hstore `db:"tags"`
+	Vars *hstore.Hstore `db:"vars"`
 
 	Modified time.Time `db:"modified"`
 }
@@ -34,21 +34,21 @@ type hostJSON struct {
 	Image   string `json:"image,omitempty"`
 	Type    string `json:"type,omitempty"`
 
-	Tags  map[string]interface{} `json:"tags,omitempty"`
-	Attrs map[string]interface{} `json:"attrs,omitempty"`
+	Tags map[string]interface{} `json:"tags,omitempty"`
+	Vars map[string]interface{} `json:"vars,omitempty"`
 }
 
 func newHost() *host {
 	return &host{
-		Tags:  &hstore.Hstore{},
-		Attrs: &hstore.Hstore{},
+		Tags: &hstore.Hstore{},
+		Vars: &hstore.Hstore{},
 	}
 }
 
 func newHostJSON() *hostJSON {
 	return &hostJSON{
-		Tags:  map[string]interface{}{},
-		Attrs: map[string]interface{}{},
+		Tags: map[string]interface{}{},
+		Vars: map[string]interface{}{},
 	}
 }
 
@@ -56,12 +56,12 @@ func hostJSONToHost(hj *hostJSON) *host {
 	h := &host{
 		ID:      hj.ID,
 		Name:    hj.Name,
-		IP:      hj.IP,
+		IP:      &inet{Addr: hj.IP},
 		Package: sql.NullString{String: hj.Package, Valid: true},
 		Image:   sql.NullString{String: hj.Image, Valid: true},
 		Type:    sql.NullString{String: hj.Type, Valid: true},
 		Tags:    &hstore.Hstore{Map: map[string]sql.NullString{}},
-		Attrs:   &hstore.Hstore{Map: map[string]sql.NullString{}},
+		Vars:    &hstore.Hstore{Map: map[string]sql.NullString{}},
 	}
 
 	for key, value := range hj.Tags {
@@ -71,8 +71,8 @@ func hostJSONToHost(hj *hostJSON) *host {
 		}
 	}
 
-	for key, value := range hj.Attrs {
-		h.Attrs.Map[fmt.Sprintf("%s", key)] = sql.NullString{
+	for key, value := range hj.Vars {
+		h.Vars.Map[fmt.Sprintf("%s", key)] = sql.NullString{
 			String: fmt.Sprintf("%s", value),
 			Valid:  true,
 		}
@@ -85,20 +85,20 @@ func hostToHostJSON(h *host) *hostJSON {
 	hj := &hostJSON{
 		ID:      h.ID,
 		Name:    h.Name,
-		IP:      h.IP,
+		IP:      h.IP.Addr,
 		Package: h.Package.String,
 		Image:   h.Image.String,
 		Type:    h.Type.String,
 		Tags:    map[string]interface{}{},
-		Attrs:   map[string]interface{}{},
+		Vars:    map[string]interface{}{},
 	}
 
 	for key, value := range h.Tags.Map {
 		hj.Tags[fmt.Sprintf("%s", key)] = value.String
 	}
 
-	for key, value := range h.Attrs.Map {
-		hj.Attrs[fmt.Sprintf("%s", key)] = value.String
+	for key, value := range h.Vars.Map {
+		hj.Vars[fmt.Sprintf("%s", key)] = value.String
 	}
 
 	return hj

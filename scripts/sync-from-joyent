@@ -21,7 +21,7 @@ def main
         'type' => host['type'],
         'ip' => host['primaryIp'],
         'tags' => Hash[host['tags'].map { |k,v| ["#{k}", "#{v}"] }],
-        'attrs' => {
+        'vars' => {
           'disk' => "#{host['disk']}",
           'memory' => "#{host['memory']}"
         }

@@ -170,19 +170,19 @@ func (srv *server) getHostInventory(w http.ResponseWriter, r *http.Request) {
 
 	inv := newInventory()
 	for _, host := range hosts {
-		inv.AddIPToGroupUnsanitized(host.Name, host.IP)
+		inv.AddIPToGroupUnsanitized(host.Name, host.IP.Addr)
 
 		if host.Type.String != "" {
 			switch host.Type.String {
 			case "smartmachine":
-				inv.Meta.AddHostvar(host.IP,
+				inv.Meta.AddHostvar(host.IP.Addr,
 					"ansible_python_interpreter", "/opt/local/bin/python")
 			case "virtualmachine":
-				inv.Meta.AddHostvar(host.IP,
+				inv.Meta.AddHostvar(host.IP.Addr,
 					"ansible_python_interpreter", "/usr/bin/python")
 			}
 
-			inv.AddIPToGroup(fmt.Sprintf("type_%s", host.Type.String), host.IP)
+			inv.AddIPToGroup(fmt.Sprintf("type_%s", host.Type.String), host.IP.Addr)
 		}
 
 		if host.Tags != nil && host.Tags.Map != nil {
@@ -191,7 +191,7 @@ func (srv *server) getHostInventory(w http.ResponseWriter, r *http.Request) {
 					continue
 				}
 				invKey := fmt.Sprintf("tag_%s_%s", key, value.String)
-				inv.AddIPToGroup(invKey, host.IP)
+				inv.AddIPToGroup(invKey, host.IP.Addr)
 			}
 		}
 	}

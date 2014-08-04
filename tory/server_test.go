@@ -39,7 +39,7 @@ func init() {
 			"role":        "job",
 			"provisioner": "p.freely",
 		},
-		Attrs: map[string]interface{}{
+		Vars: map[string]interface{}{
 			"memory": "512",
 			"disk":   "16384",
 		},
