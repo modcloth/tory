@@ -105,7 +105,9 @@ func (db *database) CreateHost(h *host) error {
 }
 
 func (db *database) ReadHost(identifier string) (*host, error) {
-	row := db.conn.QueryRowx(`SELECT * FROM hosts WHERE name = $1 OR ip::text = $1`, identifier)
+	row := db.conn.QueryRowx(`
+		SELECT * FROM hosts
+		WHERE name = $1 OR host(ip) = $1`, identifier)
 	if row == nil {
 		return nil, missingHostError
 	}
