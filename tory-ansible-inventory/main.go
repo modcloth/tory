@@ -11,6 +11,13 @@ import (
 	"github.com/codegangsta/cli"
 )
 
+var (
+	usage = `get ansible inventory from a tory server
+
+see also: http://docs.ansible.com/developing_inventory.html
+	`
+)
+
 func main() {
 	buildApp().Run(os.Args)
 }
@@ -18,11 +25,17 @@ func main() {
 func buildApp() *cli.App {
 	app := cli.NewApp()
 	app.Name = "tory-ansible-inventory"
-	app.Usage = "get ansible inventory from a tory server"
+	app.Usage = usage
 	app.Version = "0.1.0"
 	app.Flags = []cli.Flag{
-		cli.StringFlag{Name: "host"},
-		cli.BoolFlag{Name: "list"},
+		cli.StringFlag{
+			Name:  "host",
+			Usage: "show vars for only one host",
+		},
+		cli.BoolFlag{
+			Name:  "list",
+			Usage: "show all hosts, including vars for every host in _meta.hostvars",
+		},
 		cli.StringFlag{
 			Name:   "s,tory-server",
 			EnvVar: "TORY_SERVER",
