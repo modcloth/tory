@@ -1,5 +1,5 @@
 PACKAGE := github.com/modcloth/tory
-SUBPACKAGES := $(PACKAGE)/tory
+SUBPACKAGES := $(PACKAGE)/tory $(PACKAGE)/tory-ansible-inventory
 
 VERSION_VAR := $(PACKAGE)/tory.VersionString
 VERSION_VALUE := $(shell git describe --always --dirty --tags)
@@ -30,7 +30,10 @@ GOTEST_FLAGS ?= -race -v
 all: clean build migrate test save
 
 .PHONY: build
-build: deps
+build: deps .build
+
+.PHONY: .build
+.build:
 	$(GO) install $(GOBUILD_LDFLAGS) $(PACKAGE) $(SUBPACKAGES)
 
 .PHONY: deps
@@ -47,7 +50,7 @@ coverage.html: all.coverprofile
 	$(GO) tool cover -func=$<
 	$(GO) tool cover -html=$< -o $@
 
-all.coverprofile: main.coverprofile tory.coverprofile
+all.coverprofile: main.coverprofile tory.coverprofile tory-ansible-inventory.coverprofile
 	echo 'mode: count' > $@
 	grep -h -v 'mode: count' $^ >> $@
 
@@ -57,7 +60,11 @@ main.coverprofile:
 
 tory.coverprofile:
 	$(GO) test $(GOTEST_FLAGS) $(GOBUILD_LDFLAGS) \
-	  -coverprofile=$@ -covermode=count $(SUBPACKAGES)
+	  -coverprofile=$@ -covermode=count github.com/modcloth/tory/tory
+
+tory-ansible-inventory.coverprofile:
+	$(GO) test $(GOTEST_FLAGS) $(GOBUILD_LDFLAGS) \
+	  -coverprofile=$@ -covermode=count github.com/modcloth/tory/tory-ansible-inventory
 
 .PHONY: migrate
 migrate: build
