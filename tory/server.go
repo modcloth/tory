@@ -26,7 +26,8 @@ var (
 
 	toryLog = logrus.New()
 
-	missingHostsError = fmt.Errorf("missing \"host\" key")
+	missingHostsError   = fmt.Errorf("missing \"host\" key")
+	mismatchedHostError = fmt.Errorf("host in body does not match path")
 )
 
 func init() {
@@ -117,6 +118,8 @@ func (srv *server) Setup(prefix, staticDir string, verbose bool) {
 	if os.Getenv("QUIET") != "" {
 		srv.log.Level = logrus.FatalLevel
 	}
+
+	srv.db.Log = srv.log
 
 	srv.r.HandleFunc(srv.prefix, srv.getHostInventory).Methods("GET")
 	srv.r.HandleFunc(srv.prefix, srv.addHostToInventory).Methods("POST")
@@ -249,7 +252,9 @@ func (srv *server) addHostToInventory(w http.ResponseWriter, r *http.Request) {
 func (srv *server) getHost(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	h, err := srv.db.ReadHost(vars["hostname"])
-	srv.log.WithFields(logrus.Fields{"host": h}).Info("got back the host")
+	srv.log.WithFields(logrus.Fields{
+		"host": fmt.Sprintf("%#v", h),
+	}).Info("got back the host")
 	if err != nil {
 		srv.sendError(w, err, http.StatusNotFound)
 		return
@@ -266,7 +271,70 @@ func (srv *server) getHost(w http.ResponseWriter, r *http.Request) {
 }
 
 func (srv *server) updateHost(w http.ResponseWriter, r *http.Request) {
-	http.Error(w, "NOPE, cannot update host", http.StatusNotImplemented)
+	vars := mux.Vars(r)
+	srv.log.WithFields(logrus.Fields{"vars": vars}).Debug("beginning host update handling")
+
+	j, err := simplejson.NewFromReader(r.Body)
+	if err != nil {
+		srv.sendError(w, err, http.StatusBadRequest)
+		return
+	}
+
+	hjJSON, ok := j.CheckGet("host")
+	if !ok {
+		srv.sendError(w, missingHostsError, http.StatusBadRequest)
+		return
+	}
+
+	hostBytes, err := hjJSON.MarshalJSON()
+	if err != nil {
+		srv.sendError(w, err, http.StatusBadRequest)
+		return
+	}
+
+	hj := NewHostJSON()
+	err = json.Unmarshal(hostBytes, hj)
+	if err != nil {
+		srv.sendError(w, err, http.StatusBadRequest)
+		return
+	}
+
+	if hj.Name != vars["hostname"] {
+		srv.sendError(w, mismatchedHostError, http.StatusBadRequest)
+		return
+	}
+
+	h := hostJSONToHost(hj)
+
+	srv.log.WithFields(logrus.Fields{
+		"host":     fmt.Sprintf("%#v", h),
+		"hostJSON": fmt.Sprintf("%#v", hj),
+		"ip":       h.IP,
+	}).Debug("attempting to update host")
+
+	st := http.StatusNoContent
+	err = srv.db.UpdateHost(h)
+	if err != nil {
+		if err != noHostInDatabaseError {
+			srv.log.WithFields(logrus.Fields{
+				"host": h.Name,
+			}).Info("failed to update, so trying to create instead")
+			err = srv.db.CreateHost(h)
+			st = http.StatusCreated
+		} else {
+			err = nil
+		}
+	}
+
+	if err != nil {
+		srv.sendError(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Location", srv.prefix+"/"+hj.Name)
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(st)
+	fmt.Fprintf(w, "")
 }
 
 func (srv *server) deleteHost(w http.ResponseWriter, r *http.Request) {

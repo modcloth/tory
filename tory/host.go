@@ -38,6 +38,10 @@ type HostJSON struct {
 	Vars map[string]interface{} `json:"vars,omitempty"`
 }
 
+type HostPayload struct {
+	Host *HostJSON `json:"host"`
+}
+
 func newHost() *host {
 	return &host{
 		Tags: &hstore.Hstore{},

@@ -29,7 +29,7 @@ func init() {
 
 func getTestHostJSONReader() (*HostJSON, io.Reader) {
 	testHost := &HostJSON{
-		Name:    fmt.Sprintf("test%d.example.com", rand.Intn(16384)),
+		Name:    fmt.Sprintf("test%d-%d.example.com", rand.Intn(16384), time.Now().UTC().UnixNano()),
 		IP:      fmt.Sprintf("10.10.1.%d", rand.Intn(255)),
 		Package: "fancy-town-80",
 		Image:   "ubuntu-14.04",
@@ -46,12 +46,16 @@ func getTestHostJSONReader() (*HostJSON, io.Reader) {
 		},
 	}
 
-	testHostJSONBytes, err := json.Marshal(map[string]*HostJSON{"host": testHost})
+	return testHost, getReaderForHost(testHost)
+}
+
+func getReaderForHost(testHost *HostJSON) io.Reader {
+	testHostJSONBytes, err := json.Marshal(&HostPayload{testHost})
 	if err != nil {
 		panic(err)
 	}
 
-	return testHost, bytes.NewReader(testHostJSONBytes)
+	return bytes.NewReader(testHostJSONBytes)
 }
 
 func makeRequest(method, urlStr string, body io.Reader) *httptest.ResponseRecorder {
@@ -268,5 +272,42 @@ func TestHandleGetHost(t *testing.T) {
 
 	if teamStr != h.Tags["team"] {
 		t.Fatalf("outgoing team does not match: %s != !s", teamStr, h.Tags["team"])
+	}
+}
+
+func TestHandleUpdateHost(t *testing.T) {
+	h, reader := getTestHostJSONReader()
+
+	w := makeRequest("POST", `/ansible/hosts/test`, reader)
+	if w.Code != 201 {
+		t.Fatalf("response code is not 201: %v", w.Code)
+	}
+
+	newIP := fmt.Sprintf("10.10.3.%d", rand.Intn(255))
+	h.IP = newIP
+	reader = getReaderForHost(h)
+
+	w = makeRequest("PUT", `/ansible/hosts/test/`+h.Name, reader)
+	if w.Code != 204 {
+		t.Fatalf("response code is not 204: %v", w.Code)
+	}
+
+	w = makeRequest("GET", `/ansible/hosts/test/`+h.Name, nil)
+	if w.Code != 200 {
+		t.Fatalf("response code is not 200: %v", w.Code)
+	}
+
+	jBytes := w.Body.Bytes()
+
+	hjBody := &HostPayload{}
+
+	err := json.Unmarshal(jBytes, hjBody)
+	if err != nil {
+		t.Error(err)
+	}
+
+	hj := hjBody.Host
+	if hj.IP != newIP {
+		t.Fatalf("ip address was not updated: %s != %s", hj.IP, newIP)
 	}
 }

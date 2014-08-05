@@ -19,7 +19,9 @@ var (
 
 type joyentHostJSON struct {
 	Name string `json:"name"`
-	IP   string `json:"primaryIp"`
+
+	PrimaryIP string `json:"primaryIp"`
+	IP        string `json:"ip"`
 
 	Package string `json:"package,omitempty"`
 	Image   string `json:"image,omitempty"`
@@ -101,6 +103,8 @@ func syncOneMachine(server string, jhj *joyentHostJSON) {
 		jhj.Vars = map[string]interface{}{}
 	}
 
+	jhj.IP = jhj.PrimaryIP
+
 	jhj.Vars["disk"] = fmt.Sprintf("%d", jhj.Disk)
 	jhj.Vars["memory"] = fmt.Sprintf("%d", jhj.Memory)
 
@@ -110,14 +114,23 @@ func syncOneMachine(server string, jhj *joyentHostJSON) {
 	}
 
 	buf := bytes.NewReader(jhjBytes)
-	resp, err := http.Post(server, "application/json", buf)
+	req, err := http.NewRequest("PUT", server+"/"+jhj.Name, buf)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
 
-	if resp.StatusCode != 201 {
-		log.Printf("Failed to create host %v: %#v\n", jhj.Name, resp.Status)
-	} else {
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	switch resp.StatusCode {
+	case 201:
 		log.Printf("Added host %v\n", jhj.Name)
+	case 204:
+		log.Printf("Updated host %v\n", jhj.Name)
+	default:
+		log.Printf("Failed to create host %v: %#v\n", jhj.Name, resp.Status)
 	}
 }
