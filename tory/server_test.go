@@ -27,8 +27,8 @@ func init() {
 
 }
 
-func getTestHostJSONReader() (*hostJSON, io.Reader) {
-	testHost := &hostJSON{
+func getTestHostJSONReader() (*HostJSON, io.Reader) {
+	testHost := &HostJSON{
 		Name:    fmt.Sprintf("test%d.example.com", rand.Intn(16384)),
 		IP:      fmt.Sprintf("10.10.1.%d", rand.Intn(255)),
 		Package: "fancy-town-80",
@@ -46,7 +46,7 @@ func getTestHostJSONReader() (*hostJSON, io.Reader) {
 		},
 	}
 
-	testHostJSONBytes, err := json.Marshal(map[string]*hostJSON{"host": testHost})
+	testHostJSONBytes, err := json.Marshal(map[string]*HostJSON{"host": testHost})
 	if err != nil {
 		panic(err)
 	}
@@ -226,7 +226,7 @@ func TestHandleGetHost(t *testing.T) {
 		t.Fatalf("body does not contain \"host\"")
 	}
 
-	hj := newHostJSON()
+	hj := NewHostJSON()
 	hjBytes, err := hjJSON.MarshalJSON()
 	if err != nil {
 		t.Error(err)

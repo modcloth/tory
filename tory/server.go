@@ -26,7 +26,7 @@ var (
 
 	toryLog = logrus.New()
 
-	missingHostsError = fmt.Errorf("missing \"hosts\" key")
+	missingHostsError = fmt.Errorf("missing \"host\" key")
 )
 
 func init() {
@@ -227,7 +227,7 @@ func (srv *server) addHostToInventory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hj := newHostJSON()
+	hj := NewHostJSON()
 	err = json.Unmarshal(hostBytes, hj)
 	if err != nil {
 		srv.sendError(w, err, http.StatusBadRequest)
@@ -243,7 +243,7 @@ func (srv *server) addHostToInventory(w http.ResponseWriter, r *http.Request) {
 
 	hj.ID = h.ID
 	w.Header().Set("Location", srv.prefix+"/"+hj.Name)
-	srv.sendJSON(w, map[string]*hostJSON{"host": hj}, http.StatusCreated)
+	srv.sendJSON(w, map[string]*HostJSON{"host": hj}, http.StatusCreated)
 }
 
 func (srv *server) getHost(w http.ResponseWriter, r *http.Request) {
@@ -261,7 +261,7 @@ func (srv *server) getHost(w http.ResponseWriter, r *http.Request) {
 	if r.FormValue("vars-only") != "" {
 		srv.sendJSON(w, h.CollapsedVars(), http.StatusOK)
 	} else {
-		srv.sendJSON(w, map[string]*hostJSON{"host": hostToHostJSON(h)}, http.StatusOK)
+		srv.sendJSON(w, map[string]*HostJSON{"host": hostToHostJSON(h)}, http.StatusOK)
 	}
 }
 

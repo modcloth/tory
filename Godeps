@@ -4,7 +4,8 @@
 	"Packages": [
 		"github.com/modcloth/tory",
 		"github.com/modcloth/tory/tory",
-		"github.com/modcloth/tory/tory-ansible-inventory"
+		"github.com/modcloth/tory/tory-ansible-inventory",
+		"github.com/modcloth/tory/tory-sync-from-joyent"
 	],
 	"Deps": [
 		{
@@ -19,28 +20,30 @@
 		},
 		{
 			"ImportPath": "github.com/codegangsta/cli",
+			"Comment": "1.2.0-16-gaa19913",
 			"Rev": "aa19913be3107ab75ea67a5a88d667d62a69dbbd"
 		},
 		{
 			"ImportPath": "github.com/codegangsta/negroni",
-			"Rev": "d41e937476d50d8c56f554aa149a6c5756baceb3"
+			"Comment": "v0.1-27-g46bd821",
+			"Rev": "46bd821940d86fb9777f7f86e9ae428132e110da"
 		},
 		{
 			"ImportPath": "github.com/gorilla/context",
-			"Rev": "1f3e8a46c5bb4c29971d9867ede6e198ca5eddce"
+			"Rev": "14f550f51af52180c2eefed15e5fd18d63c0a64a"
 		},
 		{
 			"ImportPath": "github.com/gorilla/mux",
-			"Rev": "136d54f81f00414c45c3c68dd47e98cc97519c5e"
+			"Rev": "14cafe28513321476c73967a5a4f3454b6129c46"
 		},
 		{
 			"ImportPath": "github.com/jmoiron/sqlx",
-			"Comment": "sqlx-v1.0-31-g3e4894d",
-			"Rev": "3e4894db4b61f775c3886e377b5820c484e577ab"
+			"Comment": "sqlx-v1.0-33-g5cabf07",
+			"Rev": "5cabf073d8951a94453bd7da632b4e80e3d8258b"
 		},
 		{
 			"ImportPath": "github.com/lib/pq",
-			"Rev": "c808a1bb644594ca717ac61f71e6b0e454b835e2"
+			"Rev": "3e0659e626f761e9af7a8bd1c8b6aaea6770495b"
 		},
 		{
 			"ImportPath": "github.com/meatballhat/negroni-logrus",

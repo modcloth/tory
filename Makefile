@@ -1,5 +1,14 @@
 PACKAGE := github.com/modcloth/tory
-SUBPACKAGES := $(PACKAGE)/tory $(PACKAGE)/tory-ansible-inventory
+SUBPACKAGES := \
+  $(PACKAGE)/tory \
+  $(PACKAGE)/tory-ansible-inventory \
+  $(PACKAGE)/tory-sync-from-joyent
+
+COVERPROFILES := \
+  main.coverprofile \
+  tory.coverprofile \
+  tory-ansible-inventory.coverprofile \
+  tory-sync-from-joyent.coverprofile
 
 VERSION_VAR := $(PACKAGE)/tory.VersionString
 VERSION_VALUE := $(shell git describe --always --dirty --tags)
@@ -50,7 +59,7 @@ coverage.html: all.coverprofile
 	$(GO) tool cover -func=$<
 	$(GO) tool cover -html=$< -o $@
 
-all.coverprofile: main.coverprofile tory.coverprofile tory-ansible-inventory.coverprofile
+all.coverprofile: $(COVERPROFILES)
 	echo 'mode: count' > $@
 	grep -h -v 'mode: count' $^ >> $@
 
@@ -65,6 +74,10 @@ tory.coverprofile:
 tory-ansible-inventory.coverprofile:
 	$(GO) test $(GOTEST_FLAGS) $(GOBUILD_LDFLAGS) \
 	  -coverprofile=$@ -covermode=count github.com/modcloth/tory/tory-ansible-inventory
+
+tory-sync-from-joyent.coverprofile:
+	$(GO) test $(GOTEST_FLAGS) $(GOBUILD_LDFLAGS) \
+	  -coverprofile=$@ -covermode=count github.com/modcloth/tory/tory-sync-from-joyent
 
 .PHONY: migrate
 migrate: build

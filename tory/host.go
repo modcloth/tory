@@ -24,7 +24,7 @@ type host struct {
 	Modified time.Time `db:"modified"`
 }
 
-type hostJSON struct {
+type HostJSON struct {
 	ID int64 `json:"id,omitempty"`
 
 	Name string `json:"name"`
@@ -45,14 +45,14 @@ func newHost() *host {
 	}
 }
 
-func newHostJSON() *hostJSON {
-	return &hostJSON{
+func NewHostJSON() *HostJSON {
+	return &HostJSON{
 		Tags: map[string]interface{}{},
 		Vars: map[string]interface{}{},
 	}
 }
 
-func hostJSONToHost(hj *hostJSON) *host {
+func hostJSONToHost(hj *HostJSON) *host {
 	h := &host{
 		ID:      hj.ID,
 		Name:    hj.Name,
@@ -81,8 +81,8 @@ func hostJSONToHost(hj *hostJSON) *host {
 	return h
 }
 
-func hostToHostJSON(h *host) *hostJSON {
-	hj := &hostJSON{
+func hostToHostJSON(h *host) *HostJSON {
+	hj := &HostJSON{
 		ID:      h.ID,
 		Name:    h.Name,
 		IP:      h.IP.Addr,
