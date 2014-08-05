@@ -5,13 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 
-	"github.com/bitly/go-simplejson"
 	"github.com/codegangsta/cli"
-	"github.com/modcloth/tory/tory"
 )
 
 var (
@@ -30,6 +29,7 @@ type joyentHostJSON struct {
 	Memory int `json:"memory,omitempty"`
 
 	Tags map[string]interface{} `json:"tags,omitempty"`
+	Vars map[string]interface{} `json:"vars,omitempty"`
 }
 
 func main() {
@@ -78,70 +78,46 @@ func syncFromJoyent(c *cli.Context) {
 		}
 	}
 
-	sjJSON, err := simplejson.NewFromReader(fd)
+	sjBytes, err := ioutil.ReadAll(fd)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
 
-	i := 0
-	for {
-		j := sjJSON.GetIndex(i)
-		if j == nil {
-			break
-		}
+	sjSlice := []*joyentHostJSON{}
+	err = json.Unmarshal(sjBytes, &sjSlice)
+	if err != nil {
+		log.Fatal(err.Error())
+	}
 
-		if _, ok := j.CheckGet("name"); !ok {
-			break
-		}
-
-		syncOneMachine(server, j)
-
-		i++
+	for i := len(sjSlice) - 1; i >= 0; i-- {
+		syncOneMachine(server, sjSlice[i])
 	}
 
 	log.Println("Ding!")
 }
 
-func syncOneMachine(server string, j *simplejson.Json) {
-	hjJSONBytes, err := j.MarshalJSON()
+func syncOneMachine(server string, jhj *joyentHostJSON) {
+	if jhj.Vars == nil {
+		jhj.Vars = map[string]interface{}{}
+	}
+
+	jhj.Vars["disk"] = fmt.Sprintf("%d", jhj.Disk)
+	jhj.Vars["memory"] = fmt.Sprintf("%d", jhj.Memory)
+
+	jhjBytes, err := json.Marshal(map[string]*joyentHostJSON{"host": jhj})
 	if err != nil {
 		log.Fatal(err.Error())
 	}
 
-	jhj := &joyentHostJSON{
-		Tags: map[string]interface{}{},
-	}
-	err = json.Unmarshal(hjJSONBytes, jhj)
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-
-	hj := tory.NewHostJSON()
-	hj.Name = jhj.Name
-	hj.Package = jhj.Package
-	hj.Image = jhj.Image
-	hj.Type = jhj.Type
-	hj.IP = jhj.IP
-	for key, value := range jhj.Tags {
-		hj.Tags[key] = fmt.Sprintf("%s", value)
-	}
-	hj.Vars["disk"] = fmt.Sprintf("%d", jhj.Disk)
-	hj.Vars["memory"] = fmt.Sprintf("%d", jhj.Memory)
-
-	hjBytes, err := json.Marshal(map[string]*tory.HostJSON{"host": hj})
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-
-	buf := bytes.NewReader(hjBytes)
+	buf := bytes.NewReader(jhjBytes)
 	resp, err := http.Post(server, "application/json", buf)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
 
 	if resp.StatusCode != 201 {
-		log.Printf("Failed to create host %v: %#v\n", hj.Name, resp.Status)
+		log.Printf("Failed to create host %v: %#v\n", jhj.Name, resp.Status)
 	} else {
-		log.Printf("Added host %v\n", hj.Name)
+		log.Printf("Added host %v\n", jhj.Name)
 	}
 }
