@@ -70,5 +70,8 @@ func getInventory(c *cli.Context) {
 		log.Fatal(err.Error())
 	}
 
-	io.Copy(os.Stdout, resp.Body)
+	_, err = io.Copy(os.Stdout, resp.Body)
+	if err != nil {
+		log.Fatal(err.Error())
+	}
 }
