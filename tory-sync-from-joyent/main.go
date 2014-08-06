@@ -115,6 +115,7 @@ func syncOneMachine(server string, jhj *joyentHostJSON) {
 
 	buf := bytes.NewReader(jhjBytes)
 	req, err := http.NewRequest("PUT", server+"/"+jhj.Name, buf)
+	req.Header.Add("Content-Type", "application/json")
 	if err != nil {
 		log.Fatal(err.Error())
 	}

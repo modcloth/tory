@@ -1,6 +1,7 @@
 package tory
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"os"
@@ -101,12 +102,17 @@ func (db *database) CreateHost(h *host) error {
 
 	err = row.StructScan(h)
 	if err != nil {
-		db.Log.WithFields(logrus.Fields{"err": err}).Warn("failed to scan struct")
+		errFields := logrus.Fields{"err": err}
+		if err == sql.ErrNoRows {
+			db.Log.WithFields(errFields).Error("failed to create host")
+		} else {
+			db.Log.WithFields(errFields).Warn("failed to scan struct")
+		}
 		defer tx.Rollback()
 		return err
 	}
 
-	db.Log.WithFields(logrus.Fields{"host": h}).Info("created host")
+	db.Log.WithField("host", h).Info("created host")
 	return tx.Commit()
 }
 
@@ -141,14 +147,14 @@ func (db *database) ReadAllHosts() ([]*host, error) {
 		h := newHost()
 		err = rows.StructScan(h)
 		if err != nil {
-			db.Log.WithFields(logrus.Fields{"err": err}).Error("failed to scan struct")
+			db.Log.WithField("err", err).Error("failed to scan struct")
 			return nil, err
 		}
 		hosts = append(hosts, h)
 		count++
 	}
 
-	db.Log.WithFields(logrus.Fields{"count": count}).Info("returning all hosts")
+	db.Log.WithField("count", count).Info("returning all hosts")
 	return hosts, nil
 }
 
@@ -178,12 +184,20 @@ func (db *database) UpdateHost(h *host) error {
 
 	err = row.StructScan(h)
 	if err != nil {
-		db.Log.WithFields(logrus.Fields{"err": err}).Error("failed to scan struct")
+		errFields := logrus.Fields{"err": err}
+		if err == sql.ErrNoRows {
+			// this is not considered an error because the server update is
+			// doing a bit of tell-don't-ask in order to fall back to host
+			// creation
+			db.Log.WithFields(errFields).Warn("failed to update host")
+		} else {
+			db.Log.WithFields(errFields).Warn("failed to scan struct")
+		}
 		defer tx.Rollback()
 		return err
 	}
 
-	db.Log.WithFields(logrus.Fields{"host": h}).Info("updated host")
+	db.Log.WithField("host", h).Info("updated host")
 	return tx.Commit()
 }
 

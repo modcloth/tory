@@ -7,7 +7,6 @@ import (
 	"os"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/bitly/go-simplejson"
 	"github.com/codegangsta/negroni"
 	"github.com/gorilla/mux"
 	"github.com/meatballhat/negroni-logrus"
@@ -26,7 +25,6 @@ var (
 
 	toryLog = logrus.New()
 
-	missingHostsError   = fmt.Errorf("missing \"host\" key")
 	mismatchedHostError = fmt.Errorf("host in body does not match path")
 )
 
@@ -122,7 +120,6 @@ func (srv *server) Setup(prefix, staticDir string, verbose bool) {
 	srv.db.Log = srv.log
 
 	srv.r.HandleFunc(srv.prefix, srv.getHostInventory).Methods("GET")
-	srv.r.HandleFunc(srv.prefix, srv.addHostToInventory).Methods("POST")
 	srv.r.HandleFunc(srv.prefix+`/{hostname}`, srv.getHost).Methods("GET")
 	srv.r.HandleFunc(srv.prefix+`/{hostname}`, srv.updateHost).Methods("PUT")
 	srv.r.HandleFunc(srv.prefix+`/{hostname}`, srv.deleteHost).Methods("DELETE")
@@ -212,26 +209,7 @@ func (srv *server) getHostInventory(w http.ResponseWriter, r *http.Request) {
 }
 
 func (srv *server) addHostToInventory(w http.ResponseWriter, r *http.Request) {
-	j, err := simplejson.NewFromReader(r.Body)
-	if err != nil {
-		srv.sendError(w, err, http.StatusBadRequest)
-		return
-	}
-
-	hjJSON, ok := j.CheckGet("host")
-	if !ok {
-		srv.sendError(w, missingHostsError, http.StatusBadRequest)
-		return
-	}
-
-	hostBytes, err := hjJSON.MarshalJSON()
-	if err != nil {
-		srv.sendError(w, err, http.StatusBadRequest)
-		return
-	}
-
-	hj := NewHostJSON()
-	err = json.Unmarshal(hostBytes, hj)
+	hj, err := hostJSONFromHTTPBody(r.Body)
 	if err != nil {
 		srv.sendError(w, err, http.StatusBadRequest)
 		return
@@ -274,26 +252,7 @@ func (srv *server) updateHost(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	srv.log.WithFields(logrus.Fields{"vars": vars}).Debug("beginning host update handling")
 
-	j, err := simplejson.NewFromReader(r.Body)
-	if err != nil {
-		srv.sendError(w, err, http.StatusBadRequest)
-		return
-	}
-
-	hjJSON, ok := j.CheckGet("host")
-	if !ok {
-		srv.sendError(w, missingHostsError, http.StatusBadRequest)
-		return
-	}
-
-	hostBytes, err := hjJSON.MarshalJSON()
-	if err != nil {
-		srv.sendError(w, err, http.StatusBadRequest)
-		return
-	}
-
-	hj := NewHostJSON()
-	err = json.Unmarshal(hostBytes, hj)
+	hj, err := hostJSONFromHTTPBody(r.Body)
 	if err != nil {
 		srv.sendError(w, err, http.StatusBadRequest)
 		return
@@ -312,7 +271,7 @@ func (srv *server) updateHost(w http.ResponseWriter, r *http.Request) {
 		"ip":       h.IP,
 	}).Debug("attempting to update host")
 
-	st := http.StatusNoContent
+	st := http.StatusOK
 	err = srv.db.UpdateHost(h)
 	if err != nil {
 		if err != noHostInDatabaseError {
@@ -331,10 +290,11 @@ func (srv *server) updateHost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	hj.ID = h.ID
+
 	w.Header().Set("Location", srv.prefix+"/"+hj.Name)
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(st)
-	fmt.Fprintf(w, "")
+	srv.sendJSON(w, &HostPayload{Host: hj}, st)
 }
 
 func (srv *server) deleteHost(w http.ResponseWriter, r *http.Request) {
