@@ -2,7 +2,10 @@ package tory
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"time"
 
 	"github.com/lib/pq/hstore"
@@ -36,6 +39,21 @@ type HostJSON struct {
 
 	Tags map[string]interface{} `json:"tags,omitempty"`
 	Vars map[string]interface{} `json:"vars,omitempty"`
+}
+
+type HostPayload struct {
+	Host *HostJSON `json:"host"`
+}
+
+func hostJSONFromHTTPBody(in io.Reader) (*HostJSON, error) {
+	b, err := ioutil.ReadAll(in)
+	if err != nil {
+		return nil, err
+	}
+
+	payload := &HostPayload{}
+	err = json.Unmarshal(b, payload)
+	return payload.Host, err
 }
 
 func newHost() *host {

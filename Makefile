@@ -35,6 +35,12 @@ GOBUILD_LDFLAGS := -ldflags "\
 GOBUILD_FLAGS ?=
 GOTEST_FLAGS ?= -race -v
 
+QUIET ?=
+VERBOSE ?=
+
+export QUIET
+export VERBOSE
+
 .PHONY: all
 all: clean build migrate test save
 

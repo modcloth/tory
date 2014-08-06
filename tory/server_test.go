@@ -5,19 +5,30 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
 	"time"
-
-	"github.com/bitly/go-simplejson"
 )
 
 var (
 	testServer *server
 )
+
+type debugVars struct {
+	Env map[string]string `json:"env"`
+}
+
+type hostVars struct {
+	Team        string `json:"team"`
+	Role        string `json:"role"`
+	Provisioner string `json:"provisioner"`
+	Memory      string `json:"memory"`
+	Disk        string `json:"disk"`
+}
 
 func init() {
 	rand.Seed(time.Now().UTC().UnixNano())
@@ -29,7 +40,7 @@ func init() {
 
 func getTestHostJSONReader() (*HostJSON, io.Reader) {
 	testHost := &HostJSON{
-		Name:    fmt.Sprintf("test%d.example.com", rand.Intn(16384)),
+		Name:    fmt.Sprintf("test%d-%d.example.com", rand.Intn(16384), time.Now().UTC().UnixNano()),
 		IP:      fmt.Sprintf("10.10.1.%d", rand.Intn(255)),
 		Package: "fancy-town-80",
 		Image:   "ubuntu-14.04",
@@ -46,12 +57,16 @@ func getTestHostJSONReader() (*HostJSON, io.Reader) {
 		},
 	}
 
-	testHostJSONBytes, err := json.Marshal(map[string]*HostJSON{"host": testHost})
+	return testHost, getReaderForHost(testHost)
+}
+
+func getReaderForHost(testHost *HostJSON) io.Reader {
+	testHostJSONBytes, err := json.Marshal(&HostPayload{testHost})
 	if err != nil {
 		panic(err)
 	}
 
-	return testHost, bytes.NewReader(testHostJSONBytes)
+	return bytes.NewReader(testHostJSONBytes)
 }
 
 func makeRequest(method, urlStr string, body io.Reader) *httptest.ResponseRecorder {
@@ -83,13 +98,23 @@ func TestHandleDebugVars(t *testing.T) {
 		t.Fatalf("response code is not 200: %v", w.Code)
 	}
 
-	j, err := simplejson.NewFromReader(w.Body)
+	b, err := ioutil.ReadAll(w.Body)
 	if err != nil {
-		t.Fatalf("response is not json: %v", w.Body.String())
+		t.Error(err)
 	}
 
-	if _, ok := j.CheckGet("env"); !ok {
+	dv := &debugVars{}
+	err = json.Unmarshal(b, dv)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if dv.Env == nil {
 		t.Fatalf("body does not contain \"env\"")
+	}
+
+	if _, ok := dv.Env["DATABASE_URL"]; !ok {
+		t.Fatalf("env does not contain whitelisted vars")
 	}
 }
 
@@ -99,114 +124,30 @@ func TestHandleGetHostInventory(t *testing.T) {
 		t.Fatalf("response code is not 200: %v", w.Code)
 	}
 
-	j, err := simplejson.NewFromReader(w.Body)
-	if err != nil {
-		t.Fatalf("response is not json: %v", w.Body.String())
-	}
-
-	if _, ok := j.CheckGet("_meta"); !ok {
-		t.Fatalf("body does not contain \"_meta\"")
-	}
-}
-
-func TestHandleAddHostToInventory(t *testing.T) {
-	h, reader := getTestHostJSONReader()
-	w := makeRequest("POST", `/ansible/hosts/test`, reader)
-	if w.Code != 201 {
-		t.Fatalf("response code is not 201: %v", w.Code)
-	}
-
-	j, err := simplejson.NewFromReader(w.Body)
-	if err != nil {
-		t.Fatalf("response is not json: %v", w.Body.String())
-	}
-
-	host, ok := j.CheckGet("host")
-	if !ok {
-		t.Fatalf("body does not contain \"host\"")
-	}
-
-	_, ok = host.CheckGet("id")
-	if !ok {
-		t.Fatalf("body does not contain \"host.id\"")
-	}
-
-	hostname, ok := host.CheckGet("name")
-	if !ok {
-		t.Fatalf("body does not contain \"host.name\"")
-	}
-
-	hostnameString, err := hostname.String()
+	b, err := ioutil.ReadAll(w.Body)
 	if err != nil {
 		t.Error(err)
-		return
 	}
 
-	if hostnameString != h.Name {
-		t.Fatalf("returned hostname does not match: %v != %v", hostname, h.Name)
-	}
-
-	w = makeRequest("GET", `/ansible/hosts/test`, nil)
-	if w.Code != 200 {
-		t.Fatalf("response code is not 200: %v", w.Code)
-	}
-
-	j, err = simplejson.NewFromReader(w.Body)
+	inv := newInventory()
+	err = json.Unmarshal(b, inv)
 	if err != nil {
-		t.Fatalf("response is not json: %v", w.Body.String())
+		t.Error(err)
 	}
 
-	if _, ok := j.CheckGet(h.Name); !ok {
-		t.Fatalf("response does not contain host name as group")
+	if inv.Meta == nil {
+		t.Fatalf("body does not contain \"_meta\"")
 	}
 
-	tagTeamGroup, ok := j.CheckGet(fmt.Sprintf("tag_team_fribbles"))
-	if !ok {
-		t.Fatalf("response does not contain tag team group")
-	}
-
-	ips, err := tagTeamGroup.StringArray()
-	if err != nil {
-		t.Fatalf("failed to get ip addresses in team group")
-	}
-
-	hasIP := false
-	for _, ip := range ips {
-		if ip == h.IP {
-			hasIP = true
-		}
-	}
-
-	if !hasIP {
-		t.Fatalf("test host ip %q not in tag team group", h.IP)
-	}
-
-	typeGroup, ok := j.CheckGet(fmt.Sprintf("type_virtualmachine"))
-	if !ok {
-		t.Fatalf("response does not contain type group")
-	}
-
-	ips, err = typeGroup.StringArray()
-	if err != nil {
-		t.Fatalf("failed to get ip addresses in type group")
-	}
-
-	hasIP = false
-	for _, ip := range ips {
-		if ip == h.IP {
-			hasIP = true
-		}
-	}
-
-	if !hasIP {
-		t.Fatalf("test host ip %q not in tag team group", h.IP)
+	if inv.Meta.Hostvars == nil {
+		t.Fatalf("body meta does not contain \"hostvars\"")
 	}
 }
 
 func TestHandleGetHost(t *testing.T) {
 	h, reader := getTestHostJSONReader()
 
-	w := makeRequest("POST", `/ansible/hosts/test`, reader)
+	w := makeRequest("PUT", `/ansible/hosts/test/`+h.Name, reader)
 	if w.Code != 201 {
 		t.Fatalf("response code is not 201: %v", w.Code)
 	}
@@ -216,23 +157,7 @@ func TestHandleGetHost(t *testing.T) {
 		t.Fatalf("response code is not 200: %v", w.Code)
 	}
 
-	j, err := simplejson.NewFromReader(w.Body)
-	if err != nil {
-		t.Fatalf("response is not json: %v", w.Body.String())
-	}
-
-	hjJSON, ok := j.CheckGet("host")
-	if !ok {
-		t.Fatalf("body does not contain \"host\"")
-	}
-
-	hj := NewHostJSON()
-	hjBytes, err := hjJSON.MarshalJSON()
-	if err != nil {
-		t.Error(err)
-	}
-
-	err = json.Unmarshal(hjBytes, hj)
+	hj, err := hostJSONFromHTTPBody(w.Body)
 	if err != nil {
 		t.Error(err)
 	}
@@ -246,27 +171,137 @@ func TestHandleGetHost(t *testing.T) {
 		t.Fatalf("response code is not 200: %v", w.Code)
 	}
 
-	j, err = simplejson.NewFromReader(w.Body)
-	if err != nil {
-		t.Fatalf("response is not json: %v", w.Body.String())
-	}
-
-	_, ok = j.CheckGet("host")
-	if ok {
-		t.Fatalf("body does contains \"host\"")
-	}
-
-	team, ok := j.CheckGet("team")
-	if !ok {
-		t.Fatalf("body does not contain \"team\"")
-	}
-
-	teamStr, err := team.String()
+	b, err := ioutil.ReadAll(w.Body)
 	if err != nil {
 		t.Error(err)
 	}
 
-	if teamStr != h.Tags["team"] {
-		t.Fatalf("outgoing team does not match: %s != !s", teamStr, h.Tags["team"])
+	hv := &hostVars{}
+	err = json.Unmarshal(b, hv)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if hv.Team != h.Tags["team"] {
+		t.Fatalf("outgoing team does not match: %s != %s", hv.Team, h.Tags["team"])
+	}
+
+	if hv.Role != h.Tags["role"] {
+		t.Fatalf("outgoing role does not match: %s != %s", hv.Role, h.Tags["role"])
+	}
+
+	if hv.Provisioner != h.Tags["provisioner"] {
+		t.Fatalf("outgoing role does not match: %s != %s", hv.Provisioner, h.Tags["role"])
+	}
+
+	if hv.Memory != h.Vars["memory"] {
+		t.Fatalf("outgoing memory does not match: %s != %s", hv.Memory, h.Vars["memory"])
+	}
+
+	if hv.Disk != h.Vars["disk"] {
+		t.Fatalf("outgoing disk does not match: %s != %s", hv.Disk, h.Vars["disk"])
+	}
+}
+
+func TestHandleUpdateHost(t *testing.T) {
+	h, reader := getTestHostJSONReader()
+
+	w := makeRequest("PUT", `/ansible/hosts/test/`+h.Name, reader)
+	if w.Code != 201 {
+		t.Fatalf("response code is not 201: %v", w.Code)
+	}
+
+	hj, err := hostJSONFromHTTPBody(w.Body)
+	if err != nil {
+		t.Error(err)
+	}
+
+	h.ID = hj.ID
+
+	newIP := fmt.Sprintf("10.10.3.%d", rand.Intn(255))
+	h.IP = newIP
+	reader = getReaderForHost(h)
+
+	w = makeRequest("PUT", `/ansible/hosts/test/`+h.Name, reader)
+	if w.Code != 200 {
+		t.Fatalf("response code is not 200: %v", w.Code)
+	}
+
+	hj, err = hostJSONFromHTTPBody(w.Body)
+	if err != nil {
+		t.Error(err)
+	}
+
+	fmt.Printf("%#v\n", hj)
+
+	if hj.ID != h.ID {
+		t.Fatalf("outgoing id does not match: %v != %v", hj.ID, h.ID)
+	}
+
+	if hj.Name != h.Name {
+		t.Fatalf("outgoing hostname does not match: %v != %v", hj.Name, h.Name)
+	}
+
+	w = makeRequest("GET", `/ansible/hosts/test`, nil)
+	if w.Code != 200 {
+		t.Fatalf("response code is not 200: %v", w.Code)
+	}
+
+	b, err := ioutil.ReadAll(w.Body)
+	if err != nil {
+		t.Error(err)
+	}
+
+	inv := newInventory()
+	err = json.Unmarshal(b, inv)
+
+	if g := inv.GetGroup(h.Name); g == nil {
+		t.Fatalf("response does not contain host name as group")
+	}
+
+	tagTeamGroup := inv.GetGroup(fmt.Sprintf("tag_team_fribbles"))
+	if tagTeamGroup == nil {
+		t.Fatalf("response does not contain tag team group")
+	}
+
+	hasIP := false
+	for _, ip := range tagTeamGroup {
+		if ip == h.IP {
+			hasIP = true
+		}
+	}
+
+	if !hasIP {
+		t.Fatalf("test host ip %q not in tag team group", h.IP)
+	}
+
+	typeGroup := inv.GetGroup(fmt.Sprintf("type_virtualmachine"))
+	if typeGroup == nil {
+		t.Fatalf("response does not contain type group")
+	}
+
+	hasIP = false
+	for _, ip := range typeGroup {
+		if ip == h.IP {
+			hasIP = true
+		}
+	}
+
+	if !hasIP {
+		t.Fatalf("test host ip %q not in tag team group", h.IP)
+	}
+
+	w = makeRequest("GET", `/ansible/hosts/test/`+h.Name, nil)
+	if w.Code != 200 {
+		t.Fatalf("response code is not 200: %v", w.Code)
+	}
+
+	hj, err = hostJSONFromHTTPBody(w.Body)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if hj.IP != newIP {
+		t.Fatalf("ip address was not updated: %s != %s", hj.IP, newIP)
 	}
 }

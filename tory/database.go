@@ -1,6 +1,7 @@
 package tory
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"os"
@@ -40,7 +41,8 @@ var (
 		},
 	}
 
-	missingHostError = fmt.Errorf("no such host")
+	noHostInDatabaseError = fmt.Errorf("no such host")
+	createHostFailedError = fmt.Errorf("failed to create host")
 )
 
 func init() {
@@ -52,7 +54,7 @@ func init() {
 type database struct {
 	conn *sqlx.DB
 	l    *log.Logger
-	log  *logrus.Logger
+	Log  *logrus.Logger
 
 	Migrations map[string][]string
 }
@@ -67,7 +69,7 @@ func newDatabase(urlString string, migrations map[string][]string) (*database, e
 		conn:       conn,
 		Migrations: migrations,
 		l:          log.New(os.Stderr, "", log.LstdFlags),
-		log:        logrus.New(),
+		Log:        logrus.New(),
 	}
 
 	if db.Migrations == nil {
@@ -83,24 +85,34 @@ func (db *database) CreateHost(h *host) error {
 		return err
 	}
 
-	rows, err := tx.NamedQuery(`
+	stmt, err := tx.PrepareNamed(`
 		INSERT INTO hosts (name, package, image, type, ip, tags, vars) 
 		VALUES (:name, :package, :image, :type, :ip, :tags, :vars)
-		RETURNING id`, h)
+		RETURNING id`)
 	if err != nil {
 		defer tx.Rollback()
 		return err
 	}
 
-	for rows.Next() {
-		err = rows.StructScan(h)
-		if err != nil {
-			db.log.WithFields(logrus.Fields{"err": err}).Error("failed to scan struct")
-			return tx.Rollback()
-		}
+	row := stmt.QueryRowx(h)
+	if row == nil {
+		defer tx.Rollback()
+		return createHostFailedError
 	}
 
-	db.log.WithFields(logrus.Fields{"host": h}).Info("created host")
+	err = row.StructScan(h)
+	if err != nil {
+		errFields := logrus.Fields{"err": err}
+		if err == sql.ErrNoRows {
+			db.Log.WithFields(errFields).Error("failed to create host")
+		} else {
+			db.Log.WithFields(errFields).Warn("failed to scan struct")
+		}
+		defer tx.Rollback()
+		return err
+	}
+
+	db.Log.WithField("host", h).Info("created host")
 	return tx.Commit()
 }
 
@@ -109,7 +121,7 @@ func (db *database) ReadHost(identifier string) (*host, error) {
 		SELECT * FROM hosts
 		WHERE name = $1 OR host(ip) = $1`, identifier)
 	if row == nil {
-		return nil, missingHostError
+		return nil, noHostInDatabaseError
 	}
 
 	h := newHost()
@@ -127,28 +139,69 @@ func (db *database) ReadAllHosts() ([]*host, error) {
 		return nil, err
 	}
 
+	defer rows.Close()
+
 	hosts := []*host{}
 	count := 0
 	for rows.Next() {
 		h := newHost()
 		err = rows.StructScan(h)
 		if err != nil {
-			db.log.WithFields(logrus.Fields{"err": err}).Error("failed to scan struct")
+			db.Log.WithField("err", err).Error("failed to scan struct")
 			return nil, err
 		}
 		hosts = append(hosts, h)
 		count++
 	}
 
-	db.log.WithFields(logrus.Fields{"count": count}).Info("returning all hosts")
+	db.Log.WithField("count", count).Info("returning all hosts")
 	return hosts, nil
 }
 
 func (db *database) UpdateHost(h *host) error {
-	return nil
+	tx, err := db.conn.Beginx()
+	if err != nil {
+		return err
+	}
+
+	stmt, err := tx.PrepareNamed(`
+		UPDATE hosts
+		SET package = :package, image = :image, type = :type,
+		    ip = :ip, tags = :tags, vars = :vars
+		WHERE name = :name
+		RETURNING id`)
+
+	if err != nil {
+		defer tx.Rollback()
+		return err
+	}
+
+	row := stmt.QueryRowx(h)
+	if row == nil {
+		defer tx.Rollback()
+		return noHostInDatabaseError
+	}
+
+	err = row.StructScan(h)
+	if err != nil {
+		errFields := logrus.Fields{"err": err}
+		if err == sql.ErrNoRows {
+			// this is not considered an error because the server update is
+			// doing a bit of tell-don't-ask in order to fall back to host
+			// creation
+			db.Log.WithFields(errFields).Warn("failed to update host")
+		} else {
+			db.Log.WithFields(errFields).Warn("failed to scan struct")
+		}
+		defer tx.Rollback()
+		return err
+	}
+
+	db.Log.WithField("host", h).Info("updated host")
+	return tx.Commit()
 }
 
-func (db *database) DeleteHost(name, ip string) error {
+func (db *database) DeleteHost(name string) error {
 	return nil
 }
 

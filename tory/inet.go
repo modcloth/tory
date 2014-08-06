@@ -34,9 +34,18 @@ func (i *inet) Value() (driver.Value, error) {
 		return nil, nil
 	}
 
+	return []byte(i.String()), nil
+}
+
+func (i *inet) String() string {
+	if i.Addr == "" {
+		return ""
+	}
+
 	strValue := i.Addr
 	if i.Subnet != "" {
 		strValue = strValue + "/" + i.Subnet
 	}
-	return []byte(strValue), nil
+
+	return strValue
 }
