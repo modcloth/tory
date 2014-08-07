@@ -22,9 +22,12 @@ BRANCH_VALUE := $(shell git rev-parse --abbrev-ref HEAD)
 GENERATED_VAR := $(PACKAGE)/tory.GeneratedString
 GENERATED_VALUE := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 
-DATABASE_URL ?= postgres://localhost/tory?sslmode=disable
-export DATABASE_URL
+DOCKER_TAG ?= modcloth/tory:latest
 
+DATABASE_URL ?= postgres://localhost/tory?sslmode=disable
+PORT ?= 9462
+
+DOCKER ?= docker
 GO ?= go
 GODEP ?= godep
 GOBUILD_LDFLAGS := -ldflags "\
@@ -101,3 +104,11 @@ clean:
 .PHONY: save
 save:
 	$(GODEP) save -copy=false $(PACKAGE) $(SUBPACKAGES)
+
+.PHONY: build-container
+build-container:
+	$(DOCKER) build -t $(DOCKER_TAG) .
+
+.PHONY: run-container
+run-container:
+	$(DOCKER) run -p $(PORT):$(PORT) -e DATABASE_URL=$(DATABASE_URL) $(DOCKER_TAG)
