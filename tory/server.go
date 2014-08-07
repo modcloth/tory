@@ -54,8 +54,12 @@ func init() {
 		"PORT",
 		"QUIET",
 		"TORY_ADDR",
+		"TORY_BRANCH",
+		"TORY_GENERATED",
 		"TORY_PREFIX",
+		"TORY_REVISION",
 		"TORY_STATIC_DIR",
+		"TORY_VERSION",
 		"VERBOSE",
 	}
 }
