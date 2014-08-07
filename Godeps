@@ -5,7 +5,6 @@
 		"github.com/modcloth/tory",
 		"github.com/modcloth/tory/tory",
 		"github.com/modcloth/tory/tory/client",
-		"github.com/modcloth/tory/tory-ansible-inventory",
 		"github.com/modcloth/tory/tory-sync-from-joyent"
 	],
 	"Deps": [

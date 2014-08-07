@@ -2,14 +2,12 @@ PACKAGE := github.com/modcloth/tory
 SUBPACKAGES := \
   $(PACKAGE)/tory \
   $(PACKAGE)/tory/client \
-  $(PACKAGE)/tory-ansible-inventory \
   $(PACKAGE)/tory-sync-from-joyent
 
 COVERPROFILES := \
   main.coverprofile \
   tory.coverprofile \
   client.coverprofile \
-  tory-ansible-inventory.coverprofile \
   tory-sync-from-joyent.coverprofile
 
 VERSION_VAR := $(PACKAGE)/tory.VersionString
@@ -85,10 +83,6 @@ tory.coverprofile:
 client.coverprofile:
 	$(GO) test $(GOTEST_FLAGS) $(GOBUILD_LDFLAGS) \
 	  -coverprofile=$@ -covermode=count github.com/modcloth/tory/tory/client
-
-tory-ansible-inventory.coverprofile:
-	$(GO) test $(GOTEST_FLAGS) $(GOBUILD_LDFLAGS) \
-	  -coverprofile=$@ -covermode=count github.com/modcloth/tory/tory-ansible-inventory
 
 tory-sync-from-joyent.coverprofile:
 	$(GO) test $(GOTEST_FLAGS) $(GOBUILD_LDFLAGS) \
