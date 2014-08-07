@@ -18,21 +18,16 @@ before_script:
 - createdb -U postgres travis
 after_success:
 - go get github.com/mitchellh/gox
-- make crossbuild
+- make crosstars
 deploy:
   provider: releases
   api_key:
     secure: yYVIN8+dw6cIPCesQsSpyKgEHVQ+xBqluM7ydUIlmV5wyWVLms8d+9Dc+J4PbC9EyzwiTSXdxnYwwJbaiPt9fprnX83d8FE/P+JaXqvffBXdy2UUATuS+KzM9Hp+qo7l0LMJfnadNQ40E/Z3gr8pcU4WOWo33D8ss3XbG3iZbrw=
   file:
-  - build/darwin/amd64/tory
-  - build/darwin/amd64/tory-ansible-inventory
-  - build/darwin/amd64/tory-sync-from-joyent
-  - build/linux/amd64/tory
-  - build/linux/amd64/tory-ansible-inventory
-  - build/linux/amd64/tory-sync-from-joyent
-  - build/windows/amd64/tory-ansible-inventory.exe
-  - build/windows/amd64/tory-sync-from-joyent.exe
-  - build/windows/amd64/tory.exe
+  - tory-darwin-amd64.tar.bz2
+  - tory-linux-amd64.tar.bz2
+  - tory-windows-amd64.tar.bz2
+  - SHA256SUMS
   on:
     repo: modcloth/tory
     all_branches: true
