@@ -1,15 +1,14 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
-	"net/http"
 	"os"
 
 	"github.com/codegangsta/cli"
+	"github.com/modcloth/tory/tory/client"
 )
 
 var (
@@ -102,31 +101,24 @@ func syncOneMachine(server string, jhj *joyentHostJSON) {
 	jhj.Vars["disk"] = fmt.Sprintf("%d", jhj.Disk)
 	jhj.Vars["memory"] = fmt.Sprintf("%d", jhj.Memory)
 
-	jhjBytes, err := json.Marshal(map[string]*joyentHostJSON{"host": jhj})
+	err, status := client.PutHost(&client.RequestJSON{
+		Name: jhj.Name,
+		IP:   jhj.IP,
+		Tags: client.StringifiedMap(jhj.Tags),
+		Vars: client.StringifiedMap(jhj.Vars),
+
+		ToryServer: server,
+	})
 	if err != nil {
 		log.Fatal(err.Error())
 	}
 
-	buf := bytes.NewReader(jhjBytes)
-	req, err := http.NewRequest("PUT", server+"/"+jhj.Name, buf)
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-
-	req.Header.Add("Content-Type", "application/json")
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-
-	switch resp.StatusCode {
+	switch status {
 	case 201:
 		log.Printf("Added host %v\n", jhj.Name)
 	case 204:
 		log.Printf("Updated host %v\n", jhj.Name)
 	default:
-		log.Printf("Failed to create host %v: %#v\n", jhj.Name, resp.Status)
+		log.Printf("Failed to create host %v: %#v\n", jhj.Name, status)
 	}
 }
