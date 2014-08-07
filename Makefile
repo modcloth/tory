@@ -25,9 +25,7 @@ GENERATED_VALUE := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 DOCKER_TAG ?= modcloth/tory:latest
 
 DATABASE_URL ?= postgres://localhost/tory?sslmode=disable
-export DATABASE_URL
 PORT ?= 9462
-export PORT
 
 DOCKER ?= docker
 GO ?= go
