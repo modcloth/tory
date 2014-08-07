@@ -27,3 +27,6 @@ coverage.html
 
 gin-bin
 .env
+
+.gox-bootstrap
+build/

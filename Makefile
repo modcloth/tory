@@ -29,6 +29,7 @@ PORT ?= 9462
 
 DOCKER ?= docker
 GO ?= go
+GOX ?= gox
 GODEP ?= godep
 GOBUILD_LDFLAGS := -ldflags "\
   -X $(VERSION_VAR) $(VERSION_VALUE) \
@@ -37,6 +38,8 @@ GOBUILD_LDFLAGS := -ldflags "\
   -X $(GENERATED_VAR) $(GENERATED_VALUE)"
 GOBUILD_FLAGS ?=
 GOTEST_FLAGS ?= -race -v
+GOX_OSARCH ?= linux/amd64 darwin/amd64 windows/amd64
+GOX_FLAGS ?= -output="build/{{.OS}}/{{.Arch}}/{{.Dir}}" -osarch="$(GOX_OSARCH)"
 
 QUIET ?=
 VERBOSE ?=
@@ -57,6 +60,13 @@ build: deps .build
 .PHONY: deps
 deps:
 	$(GODEP) restore
+
+.PHONY: crossbuild
+crossbuild: deps .gox-bootstrap
+	$(GOX) $(GOX_FLAGS) $(GOBUILD_FLAGS) $(GOBUILD_LDFLAGS) $(PACKAGE) $(SUBPACKAGES)
+
+.gox-bootstrap:
+	$(GOX) -build-toolchain -osarch="$(GOX_OSARCH)" -verbose 2>&1 | tee $@
 
 .PHONY: test
 test: build test-deps .test
