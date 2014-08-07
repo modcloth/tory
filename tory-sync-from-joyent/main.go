@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -80,13 +79,8 @@ func syncFromJoyent(c *cli.Context) {
 		}
 	}
 
-	sjBytes, err := ioutil.ReadAll(fd)
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-
 	sjSlice := []*joyentHostJSON{}
-	err = json.Unmarshal(sjBytes, &sjSlice)
+	err = json.NewDecoder(fd).Decode(&sjSlice)
 	if err != nil {
 		log.Fatal(err.Error())
 	}

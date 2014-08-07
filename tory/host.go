@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"time"
 
 	"github.com/lib/pq/hstore"
@@ -46,13 +45,8 @@ type HostPayload struct {
 }
 
 func hostJSONFromHTTPBody(in io.Reader) (*HostJSON, error) {
-	b, err := ioutil.ReadAll(in)
-	if err != nil {
-		return nil, err
-	}
-
 	payload := &HostPayload{}
-	err = json.Unmarshal(b, payload)
+	err := json.NewDecoder(in).Decode(payload)
 	return payload.Host, err
 }
 
