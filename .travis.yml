@@ -35,7 +35,7 @@ deploy:
   - build/windows/amd64/tory.exe
   on:
     repo: modcloth/tory
-    branch: master
+    all_branches: true
     tags: true
 notifications:
   email: github+tory@modcloth.com
