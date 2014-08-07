@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"net/http/httptest"
@@ -98,13 +97,8 @@ func TestHandleDebugVars(t *testing.T) {
 		t.Fatalf("response code is not 200: %v", w.Code)
 	}
 
-	b, err := ioutil.ReadAll(w.Body)
-	if err != nil {
-		t.Error(err)
-	}
-
 	dv := &debugVars{}
-	err = json.Unmarshal(b, dv)
+	err := json.NewDecoder(w.Body).Decode(dv)
 	if err != nil {
 		t.Error(err)
 	}
@@ -124,13 +118,8 @@ func TestHandleGetHostInventory(t *testing.T) {
 		t.Fatalf("response code is not 200: %v", w.Code)
 	}
 
-	b, err := ioutil.ReadAll(w.Body)
-	if err != nil {
-		t.Error(err)
-	}
-
 	inv := newInventory()
-	err = json.Unmarshal(b, inv)
+	err := json.NewDecoder(w.Body).Decode(inv)
 	if err != nil {
 		t.Error(err)
 	}
@@ -171,13 +160,8 @@ func TestHandleGetHost(t *testing.T) {
 		t.Fatalf("response code is not 200: %v", w.Code)
 	}
 
-	b, err := ioutil.ReadAll(w.Body)
-	if err != nil {
-		t.Error(err)
-	}
-
 	hv := &hostVars{}
-	err = json.Unmarshal(b, hv)
+	err = json.NewDecoder(w.Body).Decode(hv)
 	if err != nil {
 		t.Error(err)
 	}
@@ -247,13 +231,8 @@ func TestHandleUpdateHost(t *testing.T) {
 		t.Fatalf("response code is not 200: %v", w.Code)
 	}
 
-	b, err := ioutil.ReadAll(w.Body)
-	if err != nil {
-		t.Error(err)
-	}
-
 	inv := newInventory()
-	err = json.Unmarshal(b, inv)
+	err = json.NewDecoder(w.Body).Decode(inv)
 
 	if g := inv.GetGroup(h.Name); g == nil {
 		t.Fatalf("response does not contain host name as group")
