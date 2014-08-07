@@ -6,8 +6,7 @@
 		"github.com/modcloth/tory/tory",
 		"github.com/modcloth/tory/tory/client",
 		"github.com/modcloth/tory/tory-ansible-inventory",
-		"github.com/modcloth/tory/tory-sync-from-joyent",
-		"github.com/modcloth/tory/ansible-modules/tory_add_host"
+		"github.com/modcloth/tory/tory-sync-from-joyent"
 	],
 	"Deps": [
 		{
@@ -41,10 +40,6 @@
 		{
 			"ImportPath": "github.com/lib/pq",
 			"Rev": "3e0659e626f761e9af7a8bd1c8b6aaea6770495b"
-		},
-		{
-			"ImportPath": "github.com/mattn/go-shellwords",
-			"Rev": "c7ca6f94add751566a61cf2199e1de78d4c3eee4"
 		},
 		{
 			"ImportPath": "github.com/meatballhat/negroni-logrus",

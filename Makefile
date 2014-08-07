@@ -4,8 +4,6 @@ SUBPACKAGES := \
   $(PACKAGE)/tory/client \
   $(PACKAGE)/tory-ansible-inventory \
   $(PACKAGE)/tory-sync-from-joyent
-ANSIBLE_MODULES := \
-  $(PACKAGE)/ansible-modules/tory_add_host
 
 COVERPROFILES := \
   main.coverprofile \
@@ -56,7 +54,7 @@ build: deps .build
 
 .PHONY: .build
 .build:
-	$(GO) install $(GOBUILD_LDFLAGS) $(PACKAGE) $(SUBPACKAGES) $(ANSIBLE_MODULES)
+	$(GO) install $(GOBUILD_LDFLAGS) $(PACKAGE) $(SUBPACKAGES)
 
 .PHONY: deps
 deps:
@@ -102,16 +100,16 @@ migrate: build
 
 .PHONY: test-deps
 test-deps:
-	$(GO) test -i $(GOTEST_FLAGS) $(GOBUILD_LDFLAGS) $(PACKAGE) $(SUBPACKAGES) $(ANSIBLE_MODULES)
+	$(GO) test -i $(GOTEST_FLAGS) $(GOBUILD_LDFLAGS) $(PACKAGE) $(SUBPACKAGES)
 
 .PHONY: clean
 clean:
 	$(RM) $${GOPATH%%:*}/bin/tory *.coverprofile coverage.html
-	$(GO) clean -x $(PACKAGE) $(SUBPACKAGES) $(ANSIBLE_MODULES)
+	$(GO) clean -x $(PACKAGE) $(SUBPACKAGES)
 
 .PHONY: save
 save:
-	$(GODEP) save -copy=false $(PACKAGE) $(SUBPACKAGES) $(ANSIBLE_MODULES)
+	$(GODEP) save -copy=false $(PACKAGE) $(SUBPACKAGES)
 
 .PHONY: build-container
 build-container:
