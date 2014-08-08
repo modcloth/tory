@@ -16,7 +16,8 @@ import (
 var (
 	toryLog = logrus.New()
 
-	mismatchedHostError = fmt.Errorf("host in body does not match path")
+	mismatchedHostError   = fmt.Errorf("host in body does not match path")
+	noHostnameInPathError = fmt.Errorf("no hostname in PATH_INFO")
 )
 
 func init() {
@@ -219,10 +220,14 @@ func (srv *server) addHostToInventory(w http.ResponseWriter, r *http.Request) {
 
 func (srv *server) getHost(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	h, err := srv.db.ReadHost(vars["hostname"])
-	srv.log.WithFields(logrus.Fields{
-		"host": fmt.Sprintf("%#v", h),
-	}).Info("got back the host")
+	hostname, ok := vars["hostname"]
+	if !ok {
+		srv.sendError(w, noHostnameInPathError, http.StatusBadRequest)
+		return
+	}
+
+	h, err := srv.db.ReadHost(hostname)
+	srv.log.WithField("host", fmt.Sprintf("%#v", h)).Info("got back the host")
 	if err != nil {
 		srv.sendError(w, err, http.StatusNotFound)
 		return
@@ -245,7 +250,14 @@ func (srv *server) updateHost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	vars := mux.Vars(r)
-	srv.log.WithFields(logrus.Fields{"vars": vars}).Debug("beginning host update handling")
+	hostname, ok := vars["hostname"]
+	if !ok {
+		srv.sendError(w, noHostnameInPathError, http.StatusBadRequest)
+		return
+	}
+
+	srv.log.WithField("vars", vars).Debug("beginning host update handling")
+	srv.log.WithField("hostname", hostname).Debug("here's the hostname")
 
 	hj, err := hostJSONFromHTTPBody(r.Body)
 	if err != nil {
@@ -253,7 +265,9 @@ func (srv *server) updateHost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if hj.Name != vars["hostname"] {
+	srv.log.WithField("hj", hj).Debug("here's hj")
+
+	if hj.Name != hostname {
 		srv.sendError(w, mismatchedHostError, http.StatusBadRequest)
 		return
 	}

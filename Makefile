@@ -1,14 +1,9 @@
 PACKAGE := github.com/modcloth/tory
-SUBPACKAGES := \
-  $(PACKAGE)/tory \
-  $(PACKAGE)/tory-ansible-inventory \
-  $(PACKAGE)/tory-sync-from-joyent
+SUBPACKAGES := $(PACKAGE)/tory
 
 COVERPROFILES := \
   main.coverprofile \
-  tory.coverprofile \
-  tory-ansible-inventory.coverprofile \
-  tory-sync-from-joyent.coverprofile
+  tory.coverprofile
 
 VERSION_VAR := $(PACKAGE)/tory.VersionString
 VERSION_VALUE := $(shell git describe --always --dirty --tags)
@@ -28,9 +23,11 @@ DATABASE_URL ?= postgres://localhost/tory?sslmode=disable
 PORT ?= 9462
 
 DOCKER ?= docker
+FLAKE8 ?= flake8
 GO ?= go
 GOX ?= gox
 GODEP ?= godep
+PIP ?= pip
 ifeq ($(shell uname),Darwin)
 SHA256SUM ?= gsha256sum
 else
@@ -43,8 +40,9 @@ GOBUILD_LDFLAGS := -ldflags "\
   -X $(GENERATED_VAR) $(GENERATED_VALUE)"
 GOBUILD_FLAGS ?=
 GOTEST_FLAGS ?= -race -v
+
 GOX_OSARCH ?= linux/amd64 darwin/amd64 windows/amd64
-GOX_FLAGS ?= -output="tory-{{.OS}}-{{.Arch}}/{{.Dir}}" -osarch="$(GOX_OSARCH)"
+GOX_FLAGS ?= -output="tory-{{.OS}}-{{.Arch}}/bin/{{.Dir}}" -osarch="$(GOX_OSARCH)"
 
 CROSS_TARBALLS := \
 	tory-linux-amd64.tar.bz2 \
@@ -58,7 +56,7 @@ export QUIET
 export VERBOSE
 
 .PHONY: all
-all: clean build migrate test save
+all: clean build migrate test save pycheck
 
 .PHONY: build
 build: deps .build
@@ -82,12 +80,18 @@ SHA256SUMS: $(CROSS_TARBALLS)
 	$(SHA256SUM) $(CROSS_TARBALLS) > $@
 
 tory-linux-amd64.tar.bz2: crossbuild
+	rsync -av hosts library bin tory-linux-amd64/
 	tar -cjvf $@ tory-linux-amd64
 
 tory-darwin-amd64.tar.bz2: crossbuild
+	rsync -av hosts library bin tory-darwin-amd64/
 	tar -cjvf $@ tory-darwin-amd64
 
 tory-windows-amd64.tar.bz2: crossbuild
+	rsync -av library tory-windows-amd64/
+	cp -v bin/tory-sync-from-joyent tory-windows-amd64/bin/tory-sync-from-joyent.py
+	mkdir -p tory-windows-amd64/hosts
+	cp -v hosts/tory tory-windows-amd64/hosts/tory.py
 	tar -cjvf $@ tory-windows-amd64
 
 .gox-bootstrap:
@@ -115,14 +119,6 @@ tory.coverprofile:
 	$(GO) test $(GOTEST_FLAGS) $(GOBUILD_LDFLAGS) \
 	  -coverprofile=$@ -covermode=count github.com/modcloth/tory/tory
 
-tory-ansible-inventory.coverprofile:
-	$(GO) test $(GOTEST_FLAGS) $(GOBUILD_LDFLAGS) \
-	  -coverprofile=$@ -covermode=count github.com/modcloth/tory/tory-ansible-inventory
-
-tory-sync-from-joyent.coverprofile:
-	$(GO) test $(GOTEST_FLAGS) $(GOBUILD_LDFLAGS) \
-	  -coverprofile=$@ -covermode=count github.com/modcloth/tory/tory-sync-from-joyent
-
 .PHONY: migrate
 migrate: build
 	$${GOPATH%%:*}/bin/tory migrate -d $(DATABASE_URL)
@@ -134,11 +130,19 @@ test-deps:
 .PHONY: clean
 clean:
 	$(RM) $${GOPATH%%:*}/bin/tory *.coverprofile coverage.html
+	$(RM) -r tory-*-amd64*
 	$(GO) clean -x $(PACKAGE) $(SUBPACKAGES)
 
 .PHONY: save
 save:
 	$(GODEP) save -copy=false $(PACKAGE) $(SUBPACKAGES)
+
+.PHONY: pycheck
+pycheck: .flake8-bootstrap
+	$(FLAKE8) ./hosts/* ./library/* ./bin/*
+
+.flake8-bootstrap:
+	(flake8 --version || $(PIP) install flake8) && touch $@
 
 .PHONY: build-container
 build-container:

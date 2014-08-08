@@ -10,6 +10,10 @@ import (
 	"github.com/lib/pq/hstore"
 )
 
+var (
+	invalidHostPayloadError = fmt.Errorf("no \"host\" in payload")
+)
+
 type host struct {
 	ID int64 `db:"id"`
 
@@ -47,6 +51,9 @@ type HostPayload struct {
 func hostJSONFromHTTPBody(in io.Reader) (*HostJSON, error) {
 	payload := &HostPayload{}
 	err := json.NewDecoder(in).Decode(payload)
+	if payload.Host == nil {
+		return nil, invalidHostPayloadError
+	}
 	return payload.Host, err
 }
 
