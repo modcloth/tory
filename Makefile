@@ -33,6 +33,7 @@ GOBUILD_LDFLAGS := -ldflags "\
   -X $(GENERATED_VAR) $(GENERATED_VALUE)"
 GOBUILD_FLAGS ?=
 GOTEST_FLAGS ?= -race -v
+PIP ?= pip
 
 QUIET ?=
 VERBOSE ?=
