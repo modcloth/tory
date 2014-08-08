@@ -42,7 +42,7 @@ GOBUILD_FLAGS ?=
 GOTEST_FLAGS ?= -race -v
 
 GOX_OSARCH ?= linux/amd64 darwin/amd64 windows/amd64
-GOX_FLAGS ?= -output="tory-{{.OS}}-{{.Arch}}/{{.Dir}}" -osarch="$(GOX_OSARCH)"
+GOX_FLAGS ?= -output="tory-{{.OS}}-{{.Arch}}/bin/{{.Dir}}" -osarch="$(GOX_OSARCH)"
 
 CROSS_TARBALLS := \
 	tory-linux-amd64.tar.bz2 \
@@ -80,12 +80,18 @@ SHA256SUMS: $(CROSS_TARBALLS)
 	$(SHA256SUM) $(CROSS_TARBALLS) > $@
 
 tory-linux-amd64.tar.bz2: crossbuild
+	rsync -av hosts library bin tory-linux-amd64/
 	tar -cjvf $@ tory-linux-amd64
 
 tory-darwin-amd64.tar.bz2: crossbuild
+	rsync -av hosts library bin tory-darwin-amd64/
 	tar -cjvf $@ tory-darwin-amd64
 
 tory-windows-amd64.tar.bz2: crossbuild
+	rsync -av library tory-windows-amd64/
+	cp -v bin/tory-sync-from-joyent tory-windows-amd64/bin/tory-sync-from-joyent.py
+	mkdir -p tory-windows-amd64/hosts
+	cp -v hosts/tory tory-windows-amd64/hosts/tory.py
 	tar -cjvf $@ tory-windows-amd64
 
 .gox-bootstrap:
@@ -124,6 +130,7 @@ test-deps:
 .PHONY: clean
 clean:
 	$(RM) $${GOPATH%%:*}/bin/tory *.coverprofile coverage.html
+	$(RM) -r tory-*-amd64*
 	$(GO) clean -x $(PACKAGE) $(SUBPACKAGES)
 
 .PHONY: save
@@ -132,7 +139,7 @@ save:
 
 .PHONY: pycheck
 pycheck: .flake8-bootstrap
-	$(FLAKE8) ./hosts/* ./library/* ./scripts/*
+	$(FLAKE8) ./hosts/* ./library/* ./bin/*
 
 .flake8-bootstrap:
 	(flake8 --version || $(PIP) install flake8) && touch $@
