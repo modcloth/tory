@@ -25,7 +25,14 @@ PORT ?= 9462
 DOCKER ?= docker
 FLAKE8 ?= flake8
 GO ?= go
+GOX ?= gox
 GODEP ?= godep
+PIP ?= pip
+ifeq ($(shell uname),Darwin)
+SHA256SUM ?= gsha256sum
+else
+SHA256SUM ?= sha256sum
+endif
 GOBUILD_LDFLAGS := -ldflags "\
   -X $(VERSION_VAR) $(VERSION_VALUE) \
   -X $(REV_VAR) $(REV_VALUE) \
@@ -33,7 +40,14 @@ GOBUILD_LDFLAGS := -ldflags "\
   -X $(GENERATED_VAR) $(GENERATED_VALUE)"
 GOBUILD_FLAGS ?=
 GOTEST_FLAGS ?= -race -v
-PIP ?= pip
+
+GOX_OSARCH ?= linux/amd64 darwin/amd64 windows/amd64
+GOX_FLAGS ?= -output="tory-{{.OS}}-{{.Arch}}/{{.Dir}}" -osarch="$(GOX_OSARCH)"
+
+CROSS_TARBALLS := \
+	tory-linux-amd64.tar.bz2 \
+	tory-darwin-amd64.tar.bz2 \
+	tory-windows-amd64.tar.bz2
 
 QUIET ?=
 VERBOSE ?=
@@ -54,6 +68,28 @@ build: deps .build
 .PHONY: deps
 deps:
 	$(GODEP) restore
+
+.PHONY: crossbuild
+crossbuild: deps .gox-bootstrap
+	$(GOX) $(GOX_FLAGS) $(GOBUILD_FLAGS) $(GOBUILD_LDFLAGS) $(PACKAGE) $(SUBPACKAGES)
+
+.PHONY: crosstars
+crosstars: $(CROSS_TARBALLS) SHA256SUMS
+
+SHA256SUMS: $(CROSS_TARBALLS)
+	$(SHA256SUM) $(CROSS_TARBALLS) > $@
+
+tory-linux-amd64.tar.bz2: crossbuild
+	tar -cjvf $@ tory-linux-amd64
+
+tory-darwin-amd64.tar.bz2: crossbuild
+	tar -cjvf $@ tory-darwin-amd64
+
+tory-windows-amd64.tar.bz2: crossbuild
+	tar -cjvf $@ tory-windows-amd64
+
+.gox-bootstrap:
+	$(GOX) -build-toolchain -osarch="$(GOX_OSARCH)" -verbose 2>&1 | tee $@
 
 .PHONY: test
 test: build test-deps .test
