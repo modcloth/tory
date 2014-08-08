@@ -5,7 +5,7 @@ go:
 sudo: false
 env:
   global:
-  - PATH=$HOME/gopath/bin:$PATH
+  - PATH=$HOME/gopath/bin:$HOME/.local/bin:$PATH
   - DATABASE_URL=postgres://postgres@localhost:5432/travis
 addons:
   postgresql: '9.3'
@@ -14,6 +14,8 @@ before_install:
 - go get code.google.com/p/go.tools/cmd/cover
 - godep restore
 - go install -a -race std
+- mkdir -p $HOME/.local/bin
+- pip install --user flake8
 before_script:
 - createdb -U postgres travis
 notifications:
