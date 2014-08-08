@@ -23,6 +23,7 @@ DATABASE_URL ?= postgres://localhost/tory?sslmode=disable
 PORT ?= 9462
 
 DOCKER ?= docker
+FLAKE8 ?= flake8
 GO ?= go
 GODEP ?= godep
 GOBUILD_LDFLAGS := -ldflags "\
@@ -40,7 +41,7 @@ export QUIET
 export VERBOSE
 
 .PHONY: all
-all: clean build migrate test save
+all: clean build migrate test save pycheck
 
 .PHONY: build
 build: deps .build
@@ -91,6 +92,13 @@ clean:
 .PHONY: save
 save:
 	$(GODEP) save -copy=false $(PACKAGE) $(SUBPACKAGES)
+
+.PHONY: pycheck
+pycheck: .flake8-bootstrap
+	$(FLAKE8) ./hosts/* ./library/* ./scripts/*
+
+.flake8-bootstrap:
+	(flake8 --version || $(PIP) install flake8) && touch $@
 
 .PHONY: build-container
 build-container:

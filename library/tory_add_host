@@ -6,7 +6,7 @@ import json
 import re
 import urlparse
 
-from ansible.module_utils.basic import *
+from ansible.module_utils.basic import *  # noqa
 
 DOCUMENTATION = """
 ---
@@ -24,7 +24,7 @@ EXAMPLES = """
     tag_env={{ env }}
     tag_role={{ primary_role }}
     var_whatever={{ something_from_somewhere }}
-    var_this_playbook="{{ lookup('env', 'USER') }} {{ ansible_date_time.iso8601 }}"
+    var_this_playbook="{{ user }} {{ ansible_date_time.iso8601 }}"
     var_special=true
 """
 
@@ -45,7 +45,8 @@ def main():
     )
 
     params = module.params
-    if 'hostname' not in params or HOSTNAME_RE.match(params['hostname']) is None:
+    if 'hostname' not in params or \
+            HOSTNAME_RE.match(params['hostname']) is None:
         module.fail_json(msg='invalid hostname')
 
     if 'ip' not in params or IPADDR_RE.match(params['ip']) is None:
@@ -55,8 +56,10 @@ def main():
     url = urlparse.urlparse(tory_server)
 
     if not tory_server:
-        module.fail_json(msg='no tory server provided in env '
-                             '(as $TORY_SERVER) or module args (as "tory_server")')
+        module.fail_json(
+            msg='no tory server provided in env (as $TORY_SERVER) or '
+            'module args (as "tory_server")'
+        )
 
     data = {
         'name': params['hostname'],
@@ -71,7 +74,9 @@ def main():
         if key.startswith('var_'):
             data['vars'][key.replace('var_', '')] = value
 
-    conn = httplib.HTTPConnection(url.netloc.split(':')[0], int(url.port or 80))
+    conn = httplib.HTTPConnection(
+        url.netloc.split(':')[0], int(url.port or 80)
+    )
     conn.request(
         'PUT', '{}/{}'.format(url.path, params['hostname']),
         json.dumps({'host': data}),

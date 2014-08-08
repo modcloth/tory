@@ -17,11 +17,18 @@ def main(sysargs=sys.argv[:]):
     parser = argparse.ArgumentParser()
     parser.add_argument('--host', dest='hostname')
     parser.add_argument('--list', dest='list_only', action='store_true')
-    parser.add_argument('-s', '--tory-server', metavar='TORY_SERVER',
-        default=os.environ.get('TORY_SERVER', 'http://localhost:9462/ansible/hosts'))
+    parser.add_argument(
+        '-s',
+        '--tory-server',
+        metavar='TORY_SERVER',
+        default=os.environ.get(
+            'TORY_SERVER', 'http://localhost:9462/ansible/hosts'
+        )
+    )
 
     args = parser.parse_args(sysargs[1:])
-    scheme, netloc, path, params, query, fragment = urlparse.urlparse(args.tory_server)
+    scheme, netloc, path, params, query, fragment = \
+        urlparse.urlparse(args.tory_server)
 
     if args.hostname:
         path += ('/' + args.hostname)

@@ -27,3 +27,5 @@ coverage.html
 
 gin-bin
 .env
+
+.flake8-bootstrap
