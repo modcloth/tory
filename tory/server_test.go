@@ -15,6 +15,7 @@ import (
 
 var (
 	testServer *server
+	testAuth   string
 )
 
 type debugVars struct {
@@ -32,8 +33,9 @@ type hostVars struct {
 func init() {
 	rand.Seed(time.Now().UTC().UnixNano())
 
+	testAuth = fmt.Sprintf("secrety-secret-%d", rand.Int())
 	testServer = buildServer(":9999", os.Getenv("DATABASE_URL"),
-		"public", `/ansible/hosts/test`, false)
+		"public", testAuth, `/ansible/hosts/test`, false)
 
 }
 
@@ -68,11 +70,13 @@ func getReaderForHost(testHost *HostJSON) io.Reader {
 	return bytes.NewReader(testHostJSONBytes)
 }
 
-func makeRequest(method, urlStr string, body io.Reader) *httptest.ResponseRecorder {
+func makeRequest(method, urlStr string, body io.Reader, auth string) *httptest.ResponseRecorder {
 	req, err := http.NewRequest(method, urlStr, body)
 	if err != nil {
 		panic(err)
 	}
+
+	req.Header.Set("Authentication", fmt.Sprintf("token %s", auth))
 
 	w := httptest.NewRecorder()
 	testServer.n.ServeHTTP(w, req)
@@ -81,7 +85,7 @@ func makeRequest(method, urlStr string, body io.Reader) *httptest.ResponseRecord
 }
 
 func TestHandlePing(t *testing.T) {
-	w := makeRequest("GET", `/ping`, nil)
+	w := makeRequest("GET", `/ping`, nil, "")
 	if w.Code != 200 {
 		t.Fatalf("response code is not 200: %v", w.Code)
 	}
@@ -92,7 +96,7 @@ func TestHandlePing(t *testing.T) {
 }
 
 func TestHandleDebugVars(t *testing.T) {
-	w := makeRequest("GET", `/debug/vars`, nil)
+	w := makeRequest("GET", `/debug/vars`, nil, "")
 	if w.Code != 200 {
 		t.Fatalf("response code is not 200: %v", w.Code)
 	}
@@ -113,7 +117,7 @@ func TestHandleDebugVars(t *testing.T) {
 }
 
 func TestHandleGetHostInventory(t *testing.T) {
-	w := makeRequest("GET", `/ansible/hosts/test`, nil)
+	w := makeRequest("GET", `/ansible/hosts/test`, nil, "")
 	if w.Code != 200 {
 		t.Fatalf("response code is not 200: %v", w.Code)
 	}
@@ -136,12 +140,12 @@ func TestHandleGetHostInventory(t *testing.T) {
 func TestHandleGetHost(t *testing.T) {
 	h, reader := getTestHostJSONReader()
 
-	w := makeRequest("PUT", `/ansible/hosts/test/`+h.Name, reader)
+	w := makeRequest("PUT", `/ansible/hosts/test/`+h.Name, reader, testAuth)
 	if w.Code != 201 {
 		t.Fatalf("response code is not 201: %v", w.Code)
 	}
 
-	w = makeRequest("GET", `/ansible/hosts/test/`+h.Name, nil)
+	w = makeRequest("GET", `/ansible/hosts/test/`+h.Name, nil, "")
 	if w.Code != 200 {
 		t.Fatalf("response code is not 200: %v", w.Code)
 	}
@@ -155,7 +159,7 @@ func TestHandleGetHost(t *testing.T) {
 		t.Fatalf("outgoing ip addr does not match: %s != %s", hj.IP, h.IP)
 	}
 
-	w = makeRequest("GET", `/ansible/hosts/test/`+h.Name+`?vars-only=1`, nil)
+	w = makeRequest("GET", `/ansible/hosts/test/`+h.Name+`?vars-only=1`, nil, "")
 	if w.Code != 200 {
 		t.Fatalf("response code is not 200: %v", w.Code)
 	}
@@ -190,7 +194,7 @@ func TestHandleGetHost(t *testing.T) {
 func TestHandleUpdateHost(t *testing.T) {
 	h, reader := getTestHostJSONReader()
 
-	w := makeRequest("PUT", `/ansible/hosts/test/`+h.Name, reader)
+	w := makeRequest("PUT", `/ansible/hosts/test/`+h.Name, reader, testAuth)
 	if w.Code != 201 {
 		t.Fatalf("response code is not 201: %v", w.Code)
 	}
@@ -206,7 +210,7 @@ func TestHandleUpdateHost(t *testing.T) {
 	h.IP = newIP
 	reader = getReaderForHost(h)
 
-	w = makeRequest("PUT", `/ansible/hosts/test/`+h.Name, reader)
+	w = makeRequest("PUT", `/ansible/hosts/test/`+h.Name, reader, testAuth)
 	if w.Code != 200 {
 		t.Fatalf("response code is not 200: %v", w.Code)
 	}
@@ -226,7 +230,7 @@ func TestHandleUpdateHost(t *testing.T) {
 		t.Fatalf("outgoing hostname does not match: %v != %v", hj.Name, h.Name)
 	}
 
-	w = makeRequest("GET", `/ansible/hosts/test`, nil)
+	w = makeRequest("GET", `/ansible/hosts/test`, nil, "")
 	if w.Code != 200 {
 		t.Fatalf("response code is not 200: %v", w.Code)
 	}
@@ -270,7 +274,7 @@ func TestHandleUpdateHost(t *testing.T) {
 		t.Fatalf("test host ip %q not in tag team group", h.IP)
 	}
 
-	w = makeRequest("GET", `/ansible/hosts/test/`+h.Name, nil)
+	w = makeRequest("GET", `/ansible/hosts/test/`+h.Name, nil, "")
 	if w.Code != 200 {
 		t.Fatalf("response code is not 200: %v", w.Code)
 	}
@@ -282,5 +286,14 @@ func TestHandleUpdateHost(t *testing.T) {
 
 	if hj.IP != newIP {
 		t.Fatalf("ip address was not updated: %s != %s", hj.IP, newIP)
+	}
+}
+
+func TestHandleUpdateHostUnauthorized(t *testing.T) {
+	h, reader := getTestHostJSONReader()
+
+	w := makeRequest("PUT", `/ansible/hosts/test/`+h.Name, reader, "bogus")
+	if w.Code != 401 {
+		t.Fatalf("response code is not 401: %v", w.Code)
 	}
 }

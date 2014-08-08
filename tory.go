@@ -21,32 +21,48 @@ func main() {
 			Action: func(c *cli.Context) {
 				tory.ServerMain(c.String("server-addr"),
 					c.String("database-url"), c.String("static-dir"),
-					c.String("prefix"), (c.Bool("verbose") || os.Getenv("VERBOSE") != ""))
+					c.String("auth-token"), c.String("prefix"),
+					(c.Bool("verbose") || os.Getenv("VERBOSE") != ""))
 			},
 			Flags: []cli.Flag{
 				cli.BoolFlag{
-					Name:  "vv, verbose",
-					Usage: "be noisy",
+					Name:   "vv, verbose",
+					Usage:  "be noisy",
+					EnvVar: "VERBOSE",
+				},
+				cli.BoolFlag{
+					Name:   "q, quiet",
+					Usage:  "be quiet",
+					EnvVar: "QUIET",
 				},
 				cli.StringFlag{
-					Name:  "a, server-addr",
-					Usage: "server address",
-					Value: tory.DefaultServerAddr,
+					Name:   "a, server-addr",
+					Value:  ":9462",
+					Usage:  "server address (also accepts $PORT)",
+					EnvVar: "TORY_ADDR",
 				},
 				cli.StringFlag{
-					Name:  "d, database-url",
-					Usage: "database connection uri",
-					Value: tory.DefaultDatabaseURL,
+					Name:   "A, auth-token",
+					Value:  "swordfish",
+					Usage:  "mutative action auth token",
+					EnvVar: "TORY_AUTH",
 				},
 				cli.StringFlag{
-					Name:  "s, static-dir",
-					Usage: "static file directory",
-					Value: tory.DefaultStaticDir,
+					Name:   "d, database-url",
+					Usage:  "database connection uri",
+					EnvVar: "DATABASE_URL",
 				},
 				cli.StringFlag{
-					Name:  "p, prefix",
-					Usage: "public api prefix",
-					Value: tory.DefaultPrefix,
+					Name:   "s, static-dir",
+					Value:  "public",
+					Usage:  "static file directory",
+					EnvVar: "TORY_STATIC_DIR",
+				},
+				cli.StringFlag{
+					Name:   "p, prefix",
+					Value:  `/ansible/hosts`,
+					Usage:  "public api prefix",
+					EnvVar: "TORY_PREFIX",
 				},
 			},
 		},

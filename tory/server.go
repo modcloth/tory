@@ -14,39 +14,15 @@ import (
 )
 
 var (
-	// DefaultServerAddr is the default value for the server address
-	DefaultServerAddr = ":" + os.Getenv("PORT")
-
-	// DefaultStaticDir is the default value for the static directory
-	DefaultStaticDir = os.Getenv("TORY_STATIC_DIR")
-
-	// DefaultPrefix is the default value for the public API prefix
-	DefaultPrefix = os.Getenv("TORY_PREFIX")
-
 	toryLog = logrus.New()
 
 	mismatchedHostError = fmt.Errorf("host in body does not match path")
 )
 
 func init() {
-	if DefaultServerAddr == ":" {
-		DefaultServerAddr = os.Getenv("TORY_ADDR")
-	}
-
-	if DefaultServerAddr == ":" || DefaultServerAddr == "" {
-		DefaultServerAddr = ":9462"
-	}
-
-	if DefaultStaticDir == "" {
-		DefaultStaticDir = "public"
-	}
-
-	if DefaultPrefix == "" {
-		DefaultPrefix = `/ansible/hosts`
-	}
-
-	if os.Getenv("QUIET") != "" {
-		toryLog.Level = logrus.FatalLevel
+	port := os.Getenv("PORT")
+	if port != "" && os.Getenv("TORY_ADDR") == "" {
+		os.Setenv("TORY_ADDR", ":"+port)
 	}
 
 	expvarplus.EnvWhitelist = []string{
@@ -65,12 +41,12 @@ func init() {
 }
 
 // ServerMain is the whole shebang
-func ServerMain(addr, dbConnStr, staticDir, prefix string, verbose bool) {
-	srv := buildServer(addr, dbConnStr, staticDir, prefix, verbose)
+func ServerMain(addr, dbConnStr, staticDir, authToken, prefix string, verbose bool) {
+	srv := buildServer(addr, dbConnStr, staticDir, authToken, prefix, verbose)
 	srv.Run(addr)
 }
 
-func buildServer(addr, dbConnStr, staticDir, prefix string, verbose bool) *server {
+func buildServer(addr, dbConnStr, staticDir, authToken, prefix string, verbose bool) *server {
 	os.Setenv("TORY_ADDR", addr)
 	os.Setenv("TORY_STATIC_DIR", staticDir)
 	os.Setenv("TORY_PREFIX", prefix)
@@ -80,7 +56,7 @@ func buildServer(addr, dbConnStr, staticDir, prefix string, verbose bool) *serve
 	if err != nil {
 		toryLog.WithFields(logrus.Fields{"err": err}).Fatal("failed to build server")
 	}
-	srv.Setup(prefix, staticDir, verbose)
+	srv.Setup(prefix, staticDir, authToken, verbose)
 	return srv
 }
 
@@ -110,7 +86,7 @@ func newServer(dbConnStr string) (*server, error) {
 	return srv, nil
 }
 
-func (srv *server) Setup(prefix, staticDir string, verbose bool) {
+func (srv *server) Setup(prefix, staticDir, authToken string, verbose bool) {
 	srv.prefix = prefix
 
 	if verbose {
@@ -137,6 +113,7 @@ func (srv *server) Setup(prefix, staticDir string, verbose bool) {
 	srv.n.Use(negroni.NewRecovery())
 	srv.n.Use(negroni.NewStatic(http.Dir(staticDir)))
 	srv.n.Use(negronilogrus.NewMiddleware())
+	srv.n.Use(newAuthMiddleware(authToken))
 	srv.n.UseHandler(srv.r)
 }
 
@@ -151,6 +128,11 @@ func (srv *server) sendError(w http.ResponseWriter, err error, status int) {
 	fmt.Fprintf(w, `{"error":%q}`, err.Error())
 }
 
+func (srv *server) sendUnauthorized(w http.ResponseWriter) {
+	w.Header().Set("WWW-Authenticate", "token")
+	srv.sendJSON(w, map[string]string{"error": "unauthorized"}, http.StatusUnauthorized)
+}
+
 func (srv *server) sendJSON(w http.ResponseWriter, j interface{}, status int) {
 	jsonBytes, err := json.MarshalIndent(j, "", "    ")
 	if err != nil {
@@ -160,6 +142,10 @@ func (srv *server) sendJSON(w http.ResponseWriter, j interface{}, status int) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)
 	fmt.Fprintf(w, string(jsonBytes)+"\n")
+}
+
+func (srv *server) isAuthed(r *http.Request) bool {
+	return r.Header.Get("Tory-Authenticated") == "yep"
 }
 
 func (srv *server) handlePing(w http.ResponseWriter, r *http.Request) {
@@ -253,6 +239,11 @@ func (srv *server) getHost(w http.ResponseWriter, r *http.Request) {
 }
 
 func (srv *server) updateHost(w http.ResponseWriter, r *http.Request) {
+	if !srv.isAuthed(r) {
+		srv.sendUnauthorized(w)
+		return
+	}
+
 	vars := mux.Vars(r)
 	srv.log.WithFields(logrus.Fields{"vars": vars}).Debug("beginning host update handling")
 
@@ -302,6 +293,11 @@ func (srv *server) updateHost(w http.ResponseWriter, r *http.Request) {
 }
 
 func (srv *server) deleteHost(w http.ResponseWriter, r *http.Request) {
+	if !srv.isAuthed(r) {
+		srv.sendUnauthorized(w)
+		return
+	}
+
 	http.Error(w, "NOPE, cannot delete host", http.StatusNotImplemented)
 }
 
@@ -310,9 +306,19 @@ func (srv *server) getHostKey(w http.ResponseWriter, r *http.Request) {
 }
 
 func (srv *server) updateHostKey(w http.ResponseWriter, r *http.Request) {
+	if !srv.isAuthed(r) {
+		srv.sendUnauthorized(w)
+		return
+	}
+
 	http.Error(w, "NOPE, no host key", http.StatusNotImplemented)
 }
 
 func (srv *server) deleteHostKey(w http.ResponseWriter, r *http.Request) {
+	if !srv.isAuthed(r) {
+		srv.sendUnauthorized(w)
+		return
+	}
+
 	http.Error(w, "NOPE, cannot delete host key", http.StatusNotImplemented)
 }
