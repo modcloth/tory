@@ -41,22 +41,22 @@ func init() {
 }
 
 // ServerMain is the whole shebang
-func ServerMain(addr, dbConnStr, staticDir, authToken, prefix string, verbose bool) {
-	srv := buildServer(addr, dbConnStr, staticDir, authToken, prefix, verbose)
-	srv.Run(addr)
+func ServerMain(opts *ServerOptions) {
+	buildServer(opts).Run(opts.Addr)
 }
 
-func buildServer(addr, dbConnStr, staticDir, authToken, prefix string, verbose bool) *server {
-	os.Setenv("TORY_ADDR", addr)
-	os.Setenv("TORY_STATIC_DIR", staticDir)
-	os.Setenv("TORY_PREFIX", prefix)
-	os.Setenv("DATABASE_URL", dbConnStr)
+func buildServer(opts *ServerOptions) *server {
+	os.Setenv("TORY_ADDR", opts.Addr)
+	os.Setenv("TORY_STATIC_DIR", opts.StaticDir)
+	os.Setenv("TORY_PREFIX", opts.Prefix)
+	os.Setenv("DATABASE_URL", opts.DatabaseURL)
 
-	srv, err := newServer(dbConnStr)
+	srv, err := newServer(opts.DatabaseURL)
 	if err != nil {
 		toryLog.WithFields(logrus.Fields{"err": err}).Fatal("failed to build server")
 	}
-	srv.Setup(prefix, staticDir, authToken, verbose)
+
+	srv.Setup(opts)
 	return srv
 }
 
@@ -86,14 +86,14 @@ func newServer(dbConnStr string) (*server, error) {
 	return srv, nil
 }
 
-func (srv *server) Setup(prefix, staticDir, authToken string, verbose bool) {
-	srv.prefix = prefix
+func (srv *server) Setup(opts *ServerOptions) {
+	srv.prefix = opts.Prefix
 
-	if verbose {
+	if opts.Verbose {
 		srv.log.Level = logrus.DebugLevel
 	}
 
-	if os.Getenv("QUIET") != "" {
+	if opts.Quiet {
 		srv.log.Level = logrus.FatalLevel
 	}
 
@@ -111,9 +111,9 @@ func (srv *server) Setup(prefix, staticDir, authToken string, verbose bool) {
 	srv.r.HandleFunc(`/debug/vars`, expvarplus.HandleExpvars).Methods("GET")
 
 	srv.n.Use(negroni.NewRecovery())
-	srv.n.Use(negroni.NewStatic(http.Dir(staticDir)))
+	srv.n.Use(negroni.NewStatic(http.Dir(opts.StaticDir)))
 	srv.n.Use(negronilogrus.NewMiddleware())
-	srv.n.Use(newAuthMiddleware(authToken))
+	srv.n.Use(newAuthMiddleware(opts.AuthToken))
 	srv.n.UseHandler(srv.r)
 }
 

@@ -34,9 +34,13 @@ func init() {
 	rand.Seed(time.Now().UTC().UnixNano())
 
 	testAuth = fmt.Sprintf("secrety-secret-%d", rand.Int())
-	testServer = buildServer(":9999", os.Getenv("DATABASE_URL"),
-		"public", testAuth, `/ansible/hosts/test`, false)
-
+	testServer = buildServer(&ServerOptions{
+		Addr:        ":9999",
+		DatabaseURL: os.Getenv("DATABASE_URL"),
+		StaticDir:   "public",
+		AuthToken:   testAuth,
+		Prefix:      `/ansible/hosts/test`,
+	})
 }
 
 func getTestHostJSONReader() (*HostJSON, io.Reader) {

@@ -14,9 +14,6 @@ import (
 )
 
 var (
-	// DefaultDatabaseURL is the default value for connecting to the database
-	DefaultDatabaseURL = os.Getenv("DATABASE_URL")
-
 	defaultMigrations = map[string][]string{
 		"2014-08-01T19:18:12": []string{
 			`CREATE EXTENSION IF NOT EXISTS hstore`,
@@ -44,12 +41,6 @@ var (
 	noHostInDatabaseError = fmt.Errorf("no such host")
 	createHostFailedError = fmt.Errorf("failed to create host")
 )
-
-func init() {
-	if DefaultDatabaseURL == "" {
-		DefaultDatabaseURL = "postgres://localhost/tory"
-	}
-}
 
 type database struct {
 	conn *sqlx.DB

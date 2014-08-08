@@ -18,12 +18,6 @@ func main() {
 			Name:      "serve",
 			ShortName: "s",
 			Usage:     "run the http server",
-			Action: func(c *cli.Context) {
-				tory.ServerMain(c.String("server-addr"),
-					c.String("database-url"), c.String("static-dir"),
-					c.String("auth-token"), c.String("prefix"),
-					(c.Bool("verbose") || os.Getenv("VERBOSE") != ""))
-			},
 			Flags: []cli.Flag{
 				cli.BoolFlag{
 					Name:   "vv, verbose",
@@ -49,6 +43,7 @@ func main() {
 				},
 				cli.StringFlag{
 					Name:   "d, database-url",
+					Value:  "postgres://localhost/tory?sslmode=disable",
 					Usage:  "database connection uri",
 					EnvVar: "DATABASE_URL",
 				},
@@ -65,6 +60,17 @@ func main() {
 					EnvVar: "TORY_PREFIX",
 				},
 			},
+			Action: func(c *cli.Context) {
+				tory.ServerMain(&tory.ServerOptions{
+					Addr:        c.String("server-addr"),
+					AuthToken:   c.String("auth-token"),
+					DatabaseURL: c.String("database-url"),
+					Prefix:      c.String("prefix"),
+					Quiet:       c.Bool("quiet"),
+					StaticDir:   c.String("static-dir"),
+					Verbose:     c.Bool("verbose"),
+				})
+			},
 		},
 		cli.Command{
 			Name:      "migrate",
@@ -75,9 +81,10 @@ func main() {
 			},
 			Flags: []cli.Flag{
 				cli.StringFlag{
-					Name:  "d, database-url",
-					Usage: "database connection uri",
-					Value: tory.DefaultDatabaseURL,
+					Name:   "d, database-url",
+					Value:  "postgres://localhost/tory?sslmode=disable",
+					Usage:  "database connection uri",
+					EnvVar: "DATABASE_URL",
 				},
 			},
 		},
