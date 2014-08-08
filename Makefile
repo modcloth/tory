@@ -1,14 +1,9 @@
 PACKAGE := github.com/modcloth/tory
-SUBPACKAGES := \
-  $(PACKAGE)/tory \
-  $(PACKAGE)/tory/client \
-  $(PACKAGE)/tory-sync-from-joyent
+SUBPACKAGES := $(PACKAGE)/tory
 
 COVERPROFILES := \
   main.coverprofile \
-  tory.coverprofile \
-  client.coverprofile \
-  tory-sync-from-joyent.coverprofile
+  tory.coverprofile
 
 VERSION_VAR := $(PACKAGE)/tory.VersionString
 VERSION_VALUE := $(shell git describe --always --dirty --tags)
@@ -79,14 +74,6 @@ main.coverprofile:
 tory.coverprofile:
 	$(GO) test $(GOTEST_FLAGS) $(GOBUILD_LDFLAGS) \
 	  -coverprofile=$@ -covermode=count github.com/modcloth/tory/tory
-
-client.coverprofile:
-	$(GO) test $(GOTEST_FLAGS) $(GOBUILD_LDFLAGS) \
-	  -coverprofile=$@ -covermode=count github.com/modcloth/tory/tory/client
-
-tory-sync-from-joyent.coverprofile:
-	$(GO) test $(GOTEST_FLAGS) $(GOBUILD_LDFLAGS) \
-	  -coverprofile=$@ -covermode=count github.com/modcloth/tory/tory-sync-from-joyent
 
 .PHONY: migrate
 migrate: build
