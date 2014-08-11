@@ -146,7 +146,7 @@ func (srv *server) sendJSON(w http.ResponseWriter, j interface{}, status int) {
 }
 
 func (srv *server) isAuthed(r *http.Request) bool {
-	return r.Header.Get("Tory-Authenticated") == "yep"
+	return r.Header.Get("Tory-Authorized") == "yep"
 }
 
 func (srv *server) handlePing(w http.ResponseWriter, r *http.Request) {

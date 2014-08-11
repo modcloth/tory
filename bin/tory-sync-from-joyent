@@ -19,6 +19,11 @@ DEFAULT_TORY_SERVER = 'http://localhost:9462/ansible/hosts'
 
 
 def main(sysargs=sys.argv[:]):
+    json_instream = sys.stdin
+    json_infile = os.environ.get('TORY_SYNC_SDC_LISTMACHINES_JSON')
+    if json_infile:
+        json_instream = open(json_infile)
+
     parser = argparse.ArgumentParser(
         usage=USAGE,
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
@@ -30,9 +35,16 @@ def main(sysargs=sys.argv[:]):
     )
     parser.add_argument(
         '-j', '--sdc-listmachines-json',
-        default=os.environ.get('TORY_SYNC_SDC_LISTMACHINES_JSON'),
+        default=json_instream,
+        metavar='TORY_SYNC_SDC_LISTMACHINES_JSON',
         type=argparse.FileType('r'),
         help='joyent listmachines input json'
+    )
+    parser.add_argument(
+        '-A', '--auth-token',
+        default=os.environ.get('TORY_AUTH_TOKEN', 'swordfish'),
+        metavar='TORY_AUTH_TOKEN',
+        help='tory server auth token'
     )
 
     args = parser.parse_args(sysargs[1:])
@@ -41,14 +53,14 @@ def main(sysargs=sys.argv[:]):
 
     for machine in json.load(args.sdc_listmachines_json):
         try:
-            _sync_one_machine(log, args.tory_server, machine)
+            _sync_one_machine(log, args.tory_server, args.auth_token, machine)
         except Exception:
             log.exception('failed to sync machine %s', machine['name'])
 
     return 0
 
 
-def _sync_one_machine(log, server, machine):
+def _sync_one_machine(log, server, auth_token, machine):
     host_def = machine.copy()
     host_def.pop('id')
     host_def.update({
@@ -60,7 +72,7 @@ def _sync_one_machine(log, server, machine):
         'tags': _stringified_dict(machine.pop('tags')),
     })
 
-    status = _put_host(server, host_def)
+    status = _put_host(server, auth_token, host_def)
     if status == 201:
         log.info('Added host %s', host_def['name'])
     elif status == 200:
@@ -76,7 +88,7 @@ def _stringified_dict(indict):
     )
 
 
-def _put_host(server, host_def):
+def _put_host(server, auth_token, host_def):
     url = urlparse(server)
     conn = httplib.HTTPConnection(
         url.netloc.split(':')[0], int(url.port or 80)
@@ -85,7 +97,10 @@ def _put_host(server, host_def):
         'PUT',
         '{}/{}'.format(url.path, host_def['name']),
         json.dumps({'host': host_def}),
-        {'Content-Type': 'application/json'}
+        {
+            'Content-Type': 'application/json',
+            'Authorization': 'token {}'.format(auth_token)
+        }
     )
     resp = conn.getresponse()
     return resp.status

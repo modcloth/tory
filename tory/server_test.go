@@ -80,7 +80,7 @@ func makeRequest(method, urlStr string, body io.Reader, auth string) *httptest.R
 		panic(err)
 	}
 
-	req.Header.Set("Authentication", fmt.Sprintf("token %s", auth))
+	req.Header.Set("Authorization", fmt.Sprintf("token %s", auth))
 
 	w := httptest.NewRecorder()
 	testServer.n.ServeHTTP(w, req)

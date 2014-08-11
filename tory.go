@@ -39,7 +39,7 @@ func main() {
 					Name:   "A, auth-token",
 					Value:  "swordfish",
 					Usage:  "mutative action auth token",
-					EnvVar: "TORY_AUTH",
+					EnvVar: "TORY_AUTH_TOKEN",
 				},
 				cli.StringFlag{
 					Name:   "d, database-url",

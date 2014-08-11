@@ -15,11 +15,11 @@ func newAuthMiddleware(token string) *authMiddleware {
 }
 
 func (a *authMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
-	r.Header.Set("Tory-Authenticated", "nope")
+	r.Header.Set("Tory-Authorized", "nope")
 
-	authHeader := r.Header.Get("Authentication")
+	authHeader := r.Header.Get("Authorization")
 	if strings.TrimSpace(authHeader) == fmt.Sprintf("token %s", a.Token) {
-		r.Header.Set("Tory-Authenticated", "yep")
+		r.Header.Set("Tory-Authorized", "yep")
 	}
 
 	next(w, r)
