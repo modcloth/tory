@@ -206,12 +206,7 @@ func (db *database) DeleteHost(name string) error {
 	}
 
 	one := 0
-	err = row.Scan(&one)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return row.Scan(&one)
 }
 
 func (db *database) ReadVar(name, key string) (string, error) {
