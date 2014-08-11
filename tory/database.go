@@ -193,6 +193,22 @@ func (db *database) UpdateHost(h *host) error {
 }
 
 func (db *database) DeleteHost(name string) error {
+	stmt, err := db.conn.Preparex(`DELETE FROM hosts WHERE name = $1 RETURNING 1`)
+	if err != nil {
+		return err
+	}
+
+	row := stmt.QueryRowx(name)
+	if row == nil {
+		return noHostInDatabaseError
+	}
+
+	one := 0
+	err = row.Scan(&one)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 

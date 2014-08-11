@@ -104,6 +104,12 @@ func (srv *server) Setup(opts *ServerOptions) {
 	srv.r.HandleFunc(srv.prefix+`/{hostname}`, srv.getHost).Methods("GET")
 	srv.r.HandleFunc(srv.prefix+`/{hostname}`, srv.updateHost).Methods("PUT")
 	srv.r.HandleFunc(srv.prefix+`/{hostname}`, srv.deleteHost).Methods("DELETE")
+	//	srv.r.HandleFunc(srv.prefix+`/{hostname}/tags/{key:.*}`, srv.getHostTag).Methods("GET")
+	//	srv.r.HandleFunc(srv.prefix+`/{hostname}/tags/{key:.*}`, srv.updateHostTag).Methods("PUT")
+	//	srv.r.HandleFunc(srv.prefix+`/{hostname}/tags/{key:.*}`, srv.deleteHostTag).Methods("DELETE")
+	//	srv.r.HandleFunc(srv.prefix+`/{hostname}/vars/{key:.*}`, srv.getHostVar).Methods("GET")
+	//	srv.r.HandleFunc(srv.prefix+`/{hostname}/vars/{key:.*}`, srv.updateHostVar).Methods("PUT")
+	//	srv.r.HandleFunc(srv.prefix+`/{hostname}/vars/{key:.*}`, srv.deleteHostVar).Methods("DELETE")
 	srv.r.HandleFunc(srv.prefix+`/{hostname}/{key:.*}`, srv.getHostKey).Methods("GET")
 	srv.r.HandleFunc(srv.prefix+`/{hostname}/{key:.*}`, srv.updateHostKey).Methods("PUT")
 	srv.r.HandleFunc(srv.prefix+`/{hostname}/{key:.*}`, srv.deleteHostKey).Methods("DELETE")
@@ -257,15 +263,12 @@ func (srv *server) updateHost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	srv.log.WithField("vars", vars).Debug("beginning host update handling")
-	srv.log.WithField("hostname", hostname).Debug("here's the hostname")
 
 	hj, err := hostJSONFromHTTPBody(r.Body)
 	if err != nil {
 		srv.sendError(w, err, http.StatusBadRequest)
 		return
 	}
-
-	srv.log.WithField("hj", hj).Debug("here's hj")
 
 	if hj.Name != hostname {
 		srv.sendError(w, mismatchedHostError, http.StatusBadRequest)
@@ -312,7 +315,28 @@ func (srv *server) deleteHost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Error(w, "NOPE, cannot delete host", http.StatusNotImplemented)
+	vars := mux.Vars(r)
+	hostname, ok := vars["hostname"]
+	if !ok {
+		srv.sendError(w, noHostnameInPathError, http.StatusBadRequest)
+		return
+	}
+
+	srv.log.WithField("vars", vars).Debug("beginning host delete handling")
+
+	err := srv.db.DeleteHost(hostname)
+	if err != nil {
+		if err == noHostnameInPathError {
+			srv.sendError(w, err, http.StatusNotFound)
+			return
+		} else {
+			srv.sendError(w, err, http.StatusInternalServerError)
+			return
+		}
+	}
+
+	w.Header().Set("Content-Length", "0")
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (srv *server) getHostKey(w http.ResponseWriter, r *http.Request) {

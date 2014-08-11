@@ -301,3 +301,36 @@ func TestHandleUpdateHostUnauthorized(t *testing.T) {
 		t.Fatalf("response code is not 401: %v", w.Code)
 	}
 }
+
+func TestHandleDeleteHost(t *testing.T) {
+	h, reader := getTestHostJSONReader()
+
+	w := makeRequest("PUT", `/ansible/hosts/test/`+h.Name, reader, testAuth)
+	if w.Code != 201 {
+		t.Fatalf("response code is not 201: %v", w.Code)
+	}
+
+	w = makeRequest("DELETE", `/ansible/hosts/test/`+h.Name, nil, testAuth)
+	if w.Code != 204 {
+		t.Fatalf("response code is not 204: %v", w.Code)
+	}
+
+	w = makeRequest("GET", `/ansible/hosts/test/`+h.Name, nil, "")
+	if w.Code != 404 {
+		t.Fatalf("response code is not 404: %v", w.Code)
+	}
+}
+
+func TestHandleDeleteHostUnauthorized(t *testing.T) {
+	h, reader := getTestHostJSONReader()
+
+	w := makeRequest("PUT", `/ansible/hosts/test/`+h.Name, reader, testAuth)
+	if w.Code != 201 {
+		t.Fatalf("response code is not 201: %v", w.Code)
+	}
+
+	w = makeRequest("DELETE", `/ansible/hosts/test/`+h.Name, nil, "bogus")
+	if w.Code != 401 {
+		t.Fatalf("response code is not 401: %v", w.Code)
+	}
+}
