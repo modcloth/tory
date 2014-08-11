@@ -344,12 +344,41 @@ func TestHandleGetHostVar(t *testing.T) {
 	}
 
 	v := &varValue{}
-	err := json.NewDecoder(w.Body).Decode(&v)
+	err := json.NewDecoder(w.Body).Decode(v)
 	if err != nil {
 		t.Error(err)
 	}
 
 	if v.Value != h.Vars["memory"] {
 		t.Fatalf("outgoing memory does not match: %s != %s", v.Value, h.Vars["memory"])
+	}
+}
+
+func TestHandleUpdateHostVar(t *testing.T) {
+	h := mustCreateHost(t)
+	b, err := json.Marshal(&varValue{Value: "1024"})
+	if err != nil {
+		t.Error(err)
+	}
+
+	r := bytes.NewReader(b)
+	w := makeRequest("PUT", `/ansible/hosts/test/`+h.Name+`/vars/memory`, r, testAuth)
+	if w.Code != 200 {
+		t.Fatalf("response code is not 200: %v", w.Code)
+	}
+
+	w = makeRequest("GET", `/ansible/hosts/test/`+h.Name+`/vars/memory`, nil, "")
+	if w.Code != 200 {
+		t.Fatalf("response code is not 200: %v", w.Code)
+	}
+
+	v := &varValue{}
+	err = json.NewDecoder(w.Body).Decode(v)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if v.Value != "1024" {
+		t.Fatalf("outgoing memory does not match: %s != 1024", v.Value)
 	}
 }

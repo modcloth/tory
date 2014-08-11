@@ -11,6 +11,7 @@ import (
 	"github.com/modcloth-labs/schema_ensurer"
 	// register the pq stuff
 	_ "github.com/lib/pq"
+	"github.com/lib/pq/hstore"
 )
 
 var (
@@ -230,6 +231,31 @@ func (db *database) ReadVar(name, key string) (string, error) {
 	}
 
 	return value, nil
+}
+
+func (db *database) UpdateVar(hostname, key, value string) error {
+	stmt, err := db.conn.Preparex(`
+		UPDATE hosts SET vars = vars || $2 WHERE name = $1 RETURNING id`)
+
+	if err != nil {
+		return err
+	}
+
+	row := stmt.QueryRowx(hostname, &hstore.Hstore{
+		Map: map[string]sql.NullString{
+			key: sql.NullString{
+				String: value,
+				Valid:  true,
+			},
+		},
+	})
+
+	if row == nil {
+		return noHostInDatabaseError
+	}
+
+	id := 0
+	return row.Scan(&id)
 }
 
 func (db *database) Setup() error {
