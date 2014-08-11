@@ -108,7 +108,7 @@ func (srv *server) Setup(opts *ServerOptions) {
 	//	srv.r.HandleFunc(srv.prefix+`/{hostname}/tags/{key}`, srv.deleteHostTag).Methods("DELETE")
 	srv.r.HandleFunc(srv.prefix+`/{hostname}/vars/{key}`, srv.getHostVar).Methods("GET")
 	srv.r.HandleFunc(srv.prefix+`/{hostname}/vars/{key}`, srv.updateHostVar).Methods("PUT")
-	//	srv.r.HandleFunc(srv.prefix+`/{hostname}/vars/{key}`, srv.deleteHostVar).Methods("DELETE")
+	srv.r.HandleFunc(srv.prefix+`/{hostname}/vars/{key}`, srv.deleteHostVar).Methods("DELETE")
 	//	srv.r.HandleFunc(srv.prefix+`/{hostname}/{key}`, srv.getHostKey).Methods("GET")
 	//	srv.r.HandleFunc(srv.prefix+`/{hostname}/{key}`, srv.updateHostKey).Methods("PUT")
 	//	srv.r.HandleFunc(srv.prefix+`/{hostname}/{key}`, srv.deleteHostKey).Methods("DELETE")
@@ -128,6 +128,10 @@ func (srv *server) Setup(opts *ServerOptions) {
 
 func (srv *server) Run(addr string) {
 	srv.n.Run(addr)
+}
+
+func (srv *server) sendNotFound(w http.ResponseWriter, msg string) {
+	srv.sendJSON(w, map[string]string{"message": msg}, http.StatusNotFound)
 }
 
 func (srv *server) sendError(w http.ResponseWriter, err error, status int) {
@@ -240,7 +244,7 @@ func (srv *server) getHost(w http.ResponseWriter, r *http.Request) {
 	h, err := srv.db.ReadHost(hostname)
 	srv.log.WithField("host", fmt.Sprintf("%#v", h)).Info("got back the host")
 	if err != nil {
-		srv.sendError(w, err, http.StatusNotFound)
+		srv.sendNotFound(w, "no such host")
 		return
 	}
 
@@ -330,8 +334,8 @@ func (srv *server) deleteHost(w http.ResponseWriter, r *http.Request) {
 
 	err := srv.db.DeleteHost(hostname)
 	if err != nil {
-		if err == noHostnameInPathError {
-			srv.sendError(w, err, http.StatusNotFound)
+		if err == noHostInDatabaseError {
+			srv.sendNotFound(w, "no such host")
 			return
 		} else {
 			srv.sendError(w, err, http.StatusInternalServerError)
@@ -339,6 +343,7 @@ func (srv *server) deleteHost(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	w.Header().Set("Location", srv.prefix+"/"+hostname)
 	srv.sendJSON(w, "", http.StatusNoContent)
 }
 
@@ -358,10 +363,15 @@ func (srv *server) getHostVar(w http.ResponseWriter, r *http.Request) {
 
 	value, err := srv.db.ReadVar(hostname, key)
 	if err != nil {
+		if err == noVarError {
+			srv.sendNotFound(w, fmt.Sprintf("no var %q", key))
+			return
+		}
 		srv.sendError(w, err, http.StatusInternalServerError)
 		return
 	}
 
+	w.Header().Set("Location", srv.prefix+"/"+hostname+"/vars/"+key)
 	srv.sendJSON(w, map[string]string{"value": value}, http.StatusOK)
 }
 
@@ -403,14 +413,14 @@ func (srv *server) updateHostVar(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		if err == noHostInDatabaseError {
-			srv.sendError(w, err, http.StatusNotFound)
+			srv.sendNotFound(w, "no such host")
 			return
 		}
 		srv.sendError(w, err, http.StatusInternalServerError)
 		return
 	}
 
-	w.Header().Set("Location", srv.prefix+"/"+hostname)
+	w.Header().Set("Location", srv.prefix+"/"+hostname+"/vars/"+key)
 	srv.sendJSON(w, map[string]string{"value": value}, st)
 }
 
@@ -420,5 +430,26 @@ func (srv *server) deleteHostVar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Error(w, "NOPE, cannot delete host var", http.StatusNotImplemented)
+	vars := mux.Vars(r)
+
+	hostname, ok := vars["hostname"]
+	if !ok {
+		srv.sendError(w, noHostnameInPathError, http.StatusBadRequest)
+		return
+	}
+
+	key, ok := vars["key"]
+	if !ok {
+		srv.sendError(w, noKeyInPathError, http.StatusBadRequest)
+		return
+	}
+
+	err := srv.db.DeleteVar(hostname, key)
+	if err != nil {
+		srv.sendError(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Location", srv.prefix+"/"+hostname+"/vars/"+key)
+	srv.sendJSON(w, "", http.StatusNoContent)
 }

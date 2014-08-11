@@ -41,6 +41,7 @@ var (
 
 	noHostInDatabaseError = fmt.Errorf("no such host")
 	createHostFailedError = fmt.Errorf("failed to create host")
+	noVarError            = fmt.Errorf("no such var")
 )
 
 type database struct {
@@ -224,13 +225,17 @@ func (db *database) ReadVar(name, key string) (string, error) {
 		return "", noHostInDatabaseError
 	}
 
-	value := ""
+	value := sql.NullString{}
 	err = row.Scan(&value)
 	if err != nil {
 		return "", err
 	}
 
-	return value, nil
+	if !value.Valid {
+		return "", noVarError
+	}
+
+	return value.String, nil
 }
 
 func (db *database) UpdateVar(hostname, key, value string) error {
@@ -250,6 +255,23 @@ func (db *database) UpdateVar(hostname, key, value string) error {
 		},
 	})
 
+	if row == nil {
+		return noHostInDatabaseError
+	}
+
+	id := 0
+	return row.Scan(&id)
+}
+
+func (db *database) DeleteVar(hostname, key string) error {
+	stmt, err := db.conn.Preparex(`
+		UPDATE hosts SET vars = delete(vars, $2) WHERE name = $1 RETURNING id`)
+
+	if err != nil {
+		return err
+	}
+
+	row := stmt.QueryRowx(hostname, key)
 	if row == nil {
 		return noHostInDatabaseError
 	}

@@ -382,3 +382,17 @@ func TestHandleUpdateHostVar(t *testing.T) {
 		t.Fatalf("outgoing memory does not match: %s != 1024", v.Value)
 	}
 }
+
+func TestHandleDeleteHostVar(t *testing.T) {
+	h := mustCreateHost(t)
+
+	w := makeRequest("DELETE", `/ansible/hosts/test/`+h.Name+`/vars/memory`, nil, testAuth)
+	if w.Code != 204 {
+		t.Fatalf("response code is not 204: %v", w.Code)
+	}
+
+	w = makeRequest("GET", `/ansible/hosts/test/`+h.Name+`/vars/memory`, nil, "")
+	if w.Code != 404 {
+		t.Fatalf("response code is not 404: %v", w.Code)
+	}
+}
