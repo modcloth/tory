@@ -18,6 +18,7 @@ var (
 
 	mismatchedHostError   = fmt.Errorf("host in body does not match path")
 	noHostnameInPathError = fmt.Errorf("no hostname in PATH_INFO")
+	noKeyInPathError      = fmt.Errorf("no key in PATH_INFO")
 )
 
 func init() {
@@ -104,15 +105,15 @@ func (srv *server) Setup(opts *ServerOptions) {
 	srv.r.HandleFunc(srv.prefix+`/{hostname}`, srv.getHost).Methods("GET")
 	srv.r.HandleFunc(srv.prefix+`/{hostname}`, srv.updateHost).Methods("PUT")
 	srv.r.HandleFunc(srv.prefix+`/{hostname}`, srv.deleteHost).Methods("DELETE")
-	//	srv.r.HandleFunc(srv.prefix+`/{hostname}/tags/{key:.*}`, srv.getHostTag).Methods("GET")
-	//	srv.r.HandleFunc(srv.prefix+`/{hostname}/tags/{key:.*}`, srv.updateHostTag).Methods("PUT")
-	//	srv.r.HandleFunc(srv.prefix+`/{hostname}/tags/{key:.*}`, srv.deleteHostTag).Methods("DELETE")
-	//	srv.r.HandleFunc(srv.prefix+`/{hostname}/vars/{key:.*}`, srv.getHostVar).Methods("GET")
-	//	srv.r.HandleFunc(srv.prefix+`/{hostname}/vars/{key:.*}`, srv.updateHostVar).Methods("PUT")
-	//	srv.r.HandleFunc(srv.prefix+`/{hostname}/vars/{key:.*}`, srv.deleteHostVar).Methods("DELETE")
-	srv.r.HandleFunc(srv.prefix+`/{hostname}/{key:.*}`, srv.getHostKey).Methods("GET")
-	srv.r.HandleFunc(srv.prefix+`/{hostname}/{key:.*}`, srv.updateHostKey).Methods("PUT")
-	srv.r.HandleFunc(srv.prefix+`/{hostname}/{key:.*}`, srv.deleteHostKey).Methods("DELETE")
+	//	srv.r.HandleFunc(srv.prefix+`/{hostname}/tags/{key}`, srv.getHostTag).Methods("GET")
+	//	srv.r.HandleFunc(srv.prefix+`/{hostname}/tags/{key}`, srv.updateHostTag).Methods("PUT")
+	//	srv.r.HandleFunc(srv.prefix+`/{hostname}/tags/{key}`, srv.deleteHostTag).Methods("DELETE")
+	srv.r.HandleFunc(srv.prefix+`/{hostname}/vars/{key}`, srv.getHostVar).Methods("GET")
+	//	srv.r.HandleFunc(srv.prefix+`/{hostname}/vars/{key}`, srv.updateHostVar).Methods("PUT")
+	//	srv.r.HandleFunc(srv.prefix+`/{hostname}/vars/{key}`, srv.deleteHostVar).Methods("DELETE")
+	//	srv.r.HandleFunc(srv.prefix+`/{hostname}/{key}`, srv.getHostKey).Methods("GET")
+	//	srv.r.HandleFunc(srv.prefix+`/{hostname}/{key}`, srv.updateHostKey).Methods("PUT")
+	//	srv.r.HandleFunc(srv.prefix+`/{hostname}/{key}`, srv.deleteHostKey).Methods("DELETE")
 
 	srv.r.HandleFunc(`/ping`, srv.handlePing).Methods("GET", "HEAD")
 	srv.r.HandleFunc(`/debug/vars`, expvarplus.HandleExpvars).Methods("GET")
@@ -146,9 +147,12 @@ func (srv *server) sendJSON(w http.ResponseWriter, j interface{}, status int) {
 		srv.sendError(w, err, http.StatusInternalServerError)
 	}
 
+	jsonString := string(jsonBytes) + "\n"
+
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("Content-Length", fmt.Sprintf("%d", len(jsonString)))
 	w.WriteHeader(status)
-	fmt.Fprintf(w, string(jsonBytes)+"\n")
+	fmt.Fprintf(w, jsonString)
 }
 
 func (srv *server) isAuthed(r *http.Request) bool {
@@ -305,7 +309,6 @@ func (srv *server) updateHost(w http.ResponseWriter, r *http.Request) {
 	hj.ID = h.ID
 
 	w.Header().Set("Location", srv.prefix+"/"+hj.Name)
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	srv.sendJSON(w, &HostPayload{Host: hj}, st)
 }
 
@@ -335,28 +338,46 @@ func (srv *server) deleteHost(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	w.Header().Set("Content-Length", "0")
-	w.WriteHeader(http.StatusNoContent)
+	srv.sendJSON(w, "", http.StatusNoContent)
 }
 
-func (srv *server) getHostKey(w http.ResponseWriter, r *http.Request) {
-	http.Error(w, "NOPE, no host key", http.StatusNotImplemented)
+func (srv *server) getHostVar(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	hostname, ok := vars["hostname"]
+	if !ok {
+		srv.sendError(w, noHostnameInPathError, http.StatusBadRequest)
+		return
+	}
+
+	key, ok := vars["key"]
+	if !ok {
+		srv.sendError(w, noKeyInPathError, http.StatusBadRequest)
+		return
+	}
+
+	value, err := srv.db.ReadVar(hostname, key)
+	if err != nil {
+		srv.sendError(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	srv.sendJSON(w, map[string]string{"value": value}, http.StatusOK)
 }
 
-func (srv *server) updateHostKey(w http.ResponseWriter, r *http.Request) {
+func (srv *server) updateHostVar(w http.ResponseWriter, r *http.Request) {
 	if !srv.isAuthed(r) {
 		srv.sendUnauthorized(w)
 		return
 	}
 
-	http.Error(w, "NOPE, no host key", http.StatusNotImplemented)
+	http.Error(w, "NOPE, no host var", http.StatusNotImplemented)
 }
 
-func (srv *server) deleteHostKey(w http.ResponseWriter, r *http.Request) {
+func (srv *server) deleteHostVar(w http.ResponseWriter, r *http.Request) {
 	if !srv.isAuthed(r) {
 		srv.sendUnauthorized(w)
 		return
 	}
 
-	http.Error(w, "NOPE, cannot delete host key", http.StatusNotImplemented)
+	http.Error(w, "NOPE, cannot delete host var", http.StatusNotImplemented)
 }

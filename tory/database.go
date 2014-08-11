@@ -212,6 +212,26 @@ func (db *database) DeleteHost(name string) error {
 	return nil
 }
 
+func (db *database) ReadVar(name, key string) (string, error) {
+	stmt, err := db.conn.Preparex(`SELECT vars -> $2 FROM hosts WHERE name = $1`)
+	if err != nil {
+		return "", err
+	}
+
+	row := stmt.QueryRowx(name, key)
+	if row == nil {
+		return "", noHostInDatabaseError
+	}
+
+	value := ""
+	err = row.Scan(&value)
+	if err != nil {
+		return "", err
+	}
+
+	return value, nil
+}
+
 func (db *database) Setup() error {
 	ensurer := sensurer.New(db.conn.DB, db.Migrations, db.l)
 	return ensurer.EnsureSchema()

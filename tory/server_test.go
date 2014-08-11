@@ -30,6 +30,10 @@ type hostVars struct {
 	Disk        string `json:"disk"`
 }
 
+type varValue struct {
+	Value string `json:"value"`
+}
+
 func init() {
 	rand.Seed(time.Now().UTC().UnixNano())
 
@@ -88,6 +92,17 @@ func makeRequest(method, urlStr string, body io.Reader, auth string) *httptest.R
 	return w
 }
 
+func mustCreateHost(t *testing.T) *HostJSON {
+	h, reader := getTestHostJSONReader()
+
+	w := makeRequest("PUT", `/ansible/hosts/test/`+h.Name, reader, testAuth)
+	if w.Code != 201 {
+		t.Fatalf("response code is not 201: %v", w.Code)
+	}
+
+	return h
+}
+
 func TestHandlePing(t *testing.T) {
 	w := makeRequest("GET", `/ping`, nil, "")
 	if w.Code != 200 {
@@ -142,14 +157,9 @@ func TestHandleGetHostInventory(t *testing.T) {
 }
 
 func TestHandleGetHost(t *testing.T) {
-	h, reader := getTestHostJSONReader()
+	h := mustCreateHost(t)
 
-	w := makeRequest("PUT", `/ansible/hosts/test/`+h.Name, reader, testAuth)
-	if w.Code != 201 {
-		t.Fatalf("response code is not 201: %v", w.Code)
-	}
-
-	w = makeRequest("GET", `/ansible/hosts/test/`+h.Name, nil, "")
+	w := makeRequest("GET", `/ansible/hosts/test/`+h.Name, nil, "")
 	if w.Code != 200 {
 		t.Fatalf("response code is not 200: %v", w.Code)
 	}
@@ -303,14 +313,9 @@ func TestHandleUpdateHostUnauthorized(t *testing.T) {
 }
 
 func TestHandleDeleteHost(t *testing.T) {
-	h, reader := getTestHostJSONReader()
+	h := mustCreateHost(t)
 
-	w := makeRequest("PUT", `/ansible/hosts/test/`+h.Name, reader, testAuth)
-	if w.Code != 201 {
-		t.Fatalf("response code is not 201: %v", w.Code)
-	}
-
-	w = makeRequest("DELETE", `/ansible/hosts/test/`+h.Name, nil, testAuth)
+	w := makeRequest("DELETE", `/ansible/hosts/test/`+h.Name, nil, testAuth)
 	if w.Code != 204 {
 		t.Fatalf("response code is not 204: %v", w.Code)
 	}
@@ -322,15 +327,29 @@ func TestHandleDeleteHost(t *testing.T) {
 }
 
 func TestHandleDeleteHostUnauthorized(t *testing.T) {
-	h, reader := getTestHostJSONReader()
+	h := mustCreateHost(t)
 
-	w := makeRequest("PUT", `/ansible/hosts/test/`+h.Name, reader, testAuth)
-	if w.Code != 201 {
-		t.Fatalf("response code is not 201: %v", w.Code)
-	}
-
-	w = makeRequest("DELETE", `/ansible/hosts/test/`+h.Name, nil, "bogus")
+	w := makeRequest("DELETE", `/ansible/hosts/test/`+h.Name, nil, "bogus")
 	if w.Code != 401 {
 		t.Fatalf("response code is not 401: %v", w.Code)
+	}
+}
+
+func TestHandleGetHostVar(t *testing.T) {
+	h := mustCreateHost(t)
+
+	w := makeRequest("GET", `/ansible/hosts/test/`+h.Name+`/vars/memory`, nil, "")
+	if w.Code != 200 {
+		t.Fatalf("response code is not 200: %v", w.Code)
+	}
+
+	v := &varValue{}
+	err := json.NewDecoder(w.Body).Decode(&v)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if v.Value != h.Vars["memory"] {
+		t.Fatalf("outgoing memory does not match: %s != %s", v.Value, h.Vars["memory"])
 	}
 }
