@@ -11,7 +11,30 @@ from ansible.module_utils.basic import *  # noqa
 DOCUMENTATION = """
 ---
 module: tory_add_host
+description:
+- register a given host in tory
 short_description: register a given host in tory
+options:
+  hostname:
+    description:
+    - name of the host to register
+    required: true
+    default: null
+  ip:
+    description:
+    - ip address of the host to register
+    required: true
+    default: null
+  auth_token:
+    description:
+    - tory server auth token (may be given as $TORY_AUTH_TOKEN)
+    required: false
+    default: swordfish
+  tory_server:
+    description:
+    - tory server host and path (may be given as $TORY_SERVER)
+    required: false
+    default: 'http://localhost:9462/ansible/hosts'
 """
 EXAMPLES = """
 ---
@@ -39,7 +62,17 @@ def main():
     module = ToryAddHostModule(
         argument_spec=dict(
             hostname=dict(required=True),
-            ip=dict(required=True)
+            ip=dict(required=True),
+            auth_token=dict(
+                required=False, default=os.environ.get(
+                    'TORY_AUTH_TOKEN', 'swordfish'
+                )
+            ),
+            tory_server=dict(
+                required=False, default=os.environ.get(
+                    'TORY_SERVER', 'http://localhost:9462/ansible/hosts'
+                )
+            ),
         ),
         supports_check_mode=True,
     )
@@ -51,6 +84,9 @@ def main():
 
     if 'ip' not in params or IPADDR_RE.match(params['ip']) is None:
         module.fail_json(msg='invalid ip address')
+
+    if 'auth_token' not in params:
+        module.fail_json(msg='no auth_token provided')
 
     tory_server = params.get('tory_server', os.environ.get('TORY_SERVER'))
     url = urlparse.urlparse(tory_server)
@@ -80,7 +116,10 @@ def main():
     conn.request(
         'PUT', '{}/{}'.format(url.path, params['hostname']),
         json.dumps({'host': data}),
-        {'Content-Type': 'application/json'}
+        {
+            'Content-Type': 'application/json',
+            'Authorization': 'token {}'.format(params['auth_token'])
+        }
     )
     resp = conn.getresponse()
     if resp.status not in (201, 200):
