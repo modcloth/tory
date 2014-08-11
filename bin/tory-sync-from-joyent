@@ -19,10 +19,10 @@ DEFAULT_TORY_SERVER = 'http://localhost:9462/ansible/hosts'
 
 
 def main(sysargs=sys.argv[:]):
-    json_instream = sys.stdin
+    default_json_input = sys.stdin
     json_infile = os.environ.get('TORY_SYNC_SDC_LISTMACHINES_JSON')
     if json_infile:
-        json_instream = open(json_infile)
+        default_json_input = open(json_infile)
 
     parser = argparse.ArgumentParser(
         usage=USAGE,
@@ -35,7 +35,7 @@ def main(sysargs=sys.argv[:]):
     )
     parser.add_argument(
         '-j', '--sdc-listmachines-json',
-        default=json_instream,
+        default=default_json_input,
         metavar='TORY_SYNC_SDC_LISTMACHINES_JSON',
         type=argparse.FileType('r'),
         help='joyent listmachines input json'
