@@ -42,6 +42,7 @@ var (
 	noHostInDatabaseError = fmt.Errorf("no such host")
 	createHostFailedError = fmt.Errorf("failed to create host")
 	noVarError            = fmt.Errorf("no such var")
+	noTagError            = fmt.Errorf("no such tag")
 )
 
 type database struct {
@@ -266,6 +267,70 @@ func (db *database) UpdateVar(hostname, key, value string) error {
 func (db *database) DeleteVar(hostname, key string) error {
 	stmt, err := db.conn.Preparex(`
 		UPDATE hosts SET vars = delete(vars, $2) WHERE name = $1 RETURNING id`)
+
+	if err != nil {
+		return err
+	}
+
+	id := &idRow{}
+	err = stmt.Get(id, hostname, key)
+	if err != nil && err == sql.ErrNoRows {
+		return noHostInDatabaseError
+	}
+
+	return err
+}
+
+func (db *database) ReadTag(name, key string) (string, error) {
+	stmt, err := db.conn.Preparex(`SELECT tags -> $2 AS value FROM hosts WHERE name = $1`)
+	if err != nil {
+		return "", err
+	}
+
+	v := &valueRow{Value: sql.NullString{}}
+	err = stmt.Get(v, name, key)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return "", noHostInDatabaseError
+		}
+		return "", err
+	}
+
+	if !v.Value.Valid {
+		return "", noTagError
+	}
+
+	return v.Value.String, nil
+}
+
+func (db *database) UpdateTag(hostname, key, value string) error {
+	stmt, err := db.conn.Preparex(`
+		UPDATE hosts SET tags = tags || $2 WHERE name = $1 RETURNING id`)
+
+	if err != nil {
+		return err
+	}
+
+	id := &idRow{}
+	err = stmt.Get(id, hostname, &hstore.Hstore{
+		Map: map[string]sql.NullString{
+			key: sql.NullString{
+				String: value,
+				Valid:  true,
+			},
+		},
+	})
+
+	if err != nil && err == sql.ErrNoRows {
+		return noHostInDatabaseError
+	}
+
+	return err
+}
+
+func (db *database) DeleteTag(hostname, key string) error {
+	stmt, err := db.conn.Preparex(`
+		UPDATE hosts SET tags = delete(tags, $2) WHERE name = $1 RETURNING id`)
 
 	if err != nil {
 		return err

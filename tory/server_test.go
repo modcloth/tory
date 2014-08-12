@@ -397,6 +397,68 @@ func TestHandleDeleteHostVar(t *testing.T) {
 	}
 }
 
+func TestHandleGetHostTag(t *testing.T) {
+	h := mustCreateHost(t)
+
+	w := makeRequest("GET", `/ansible/hosts/test/`+h.Name+`/tags/team`, nil, "")
+	if w.Code != 200 {
+		t.Fatalf("response code is not 200: %v", w.Code)
+	}
+
+	v := &varValue{}
+	err := json.NewDecoder(w.Body).Decode(v)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if v.Value != h.Tags["team"] {
+		t.Fatalf("outgoing team does not match: %s != %s", v.Value, h.Tags["team"])
+	}
+}
+
+func TestHandleUpdateHostTag(t *testing.T) {
+	h := mustCreateHost(t)
+	b, err := json.Marshal(&varValue{Value: "sploop"})
+	if err != nil {
+		t.Error(err)
+	}
+
+	r := bytes.NewReader(b)
+	w := makeRequest("PUT", `/ansible/hosts/test/`+h.Name+`/tags/team`, r, testAuth)
+	if w.Code != 200 {
+		t.Fatalf("response code is not 200: %v", w.Code)
+	}
+
+	w = makeRequest("GET", `/ansible/hosts/test/`+h.Name+`/tags/team`, nil, "")
+	if w.Code != 200 {
+		t.Fatalf("response code is not 200: %v", w.Code)
+	}
+
+	v := &varValue{}
+	err = json.NewDecoder(w.Body).Decode(v)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if v.Value != "sploop" {
+		t.Fatalf("outgoing team does not match: %s != sploop", v.Value)
+	}
+}
+
+func TestHandleDeleteHostTag(t *testing.T) {
+	h := mustCreateHost(t)
+
+	w := makeRequest("DELETE", `/ansible/hosts/test/`+h.Name+`/tags/team`, nil, testAuth)
+	if w.Code != 204 {
+		t.Fatalf("response code is not 204: %v", w.Code)
+	}
+
+	w = makeRequest("GET", `/ansible/hosts/test/`+h.Name+`/tags/team`, nil, "")
+	if w.Code != 404 {
+		t.Fatalf("response code is not 404: %v", w.Code)
+	}
+}
+
 func TestHandleFilterHosts(t *testing.T) {
 	h := mustCreateHost(t)
 

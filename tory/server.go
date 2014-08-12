@@ -104,9 +104,9 @@ func (srv *server) Setup(opts *ServerOptions) {
 	srv.db.Log = srv.log
 
 	srv.r.HandleFunc(srv.prefix, srv.getHostInventory).Methods("GET")
-	//	srv.r.HandleFunc(srv.prefix+`/{hostname}/tags/{key}`, srv.getHostTag).Methods("GET")
-	//	srv.r.HandleFunc(srv.prefix+`/{hostname}/tags/{key}`, srv.updateHostTag).Methods("PUT")
-	//	srv.r.HandleFunc(srv.prefix+`/{hostname}/tags/{key}`, srv.deleteHostTag).Methods("DELETE")
+	srv.r.HandleFunc(srv.prefix+`/{hostname}/tags/{key}`, srv.getHostTag).Methods("GET")
+	srv.r.HandleFunc(srv.prefix+`/{hostname}/tags/{key}`, srv.updateHostTag).Methods("PUT")
+	srv.r.HandleFunc(srv.prefix+`/{hostname}/tags/{key}`, srv.deleteHostTag).Methods("DELETE")
 	srv.r.HandleFunc(srv.prefix+`/{hostname}/vars/{key}`, srv.getHostVar).Methods("GET")
 	srv.r.HandleFunc(srv.prefix+`/{hostname}/vars/{key}`, srv.updateHostVar).Methods("PUT")
 	srv.r.HandleFunc(srv.prefix+`/{hostname}/vars/{key}`, srv.deleteHostVar).Methods("DELETE")
@@ -463,5 +463,112 @@ func (srv *server) deleteHostVar(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Location", srv.prefix+"/"+hostname+"/vars/"+key)
+	srv.sendJSON(w, "", http.StatusNoContent)
+}
+
+func (srv *server) getHostTag(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	hostname, ok := vars["hostname"]
+	if !ok {
+		srv.sendError(w, noHostnameInPathError, http.StatusBadRequest)
+		return
+	}
+
+	key, ok := vars["key"]
+	if !ok {
+		srv.sendError(w, noKeyInPathError, http.StatusBadRequest)
+		return
+	}
+
+	value, err := srv.db.ReadTag(hostname, key)
+	if err != nil {
+		if err == noTagError {
+			srv.sendNotFound(w, fmt.Sprintf("no var %q", key))
+			return
+		}
+		srv.sendError(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Location", srv.prefix+"/"+hostname+"/tags/"+key)
+	srv.sendJSON(w, map[string]string{"value": value}, http.StatusOK)
+}
+
+func (srv *server) updateHostTag(w http.ResponseWriter, r *http.Request) {
+	if !srv.isAuthed(r) {
+		srv.sendUnauthorized(w)
+		return
+	}
+
+	vars := mux.Vars(r)
+
+	hostname, ok := vars["hostname"]
+	if !ok {
+		srv.sendError(w, noHostnameInPathError, http.StatusBadRequest)
+		return
+	}
+
+	key, ok := vars["key"]
+	if !ok {
+		srv.sendError(w, noKeyInPathError, http.StatusBadRequest)
+		return
+	}
+
+	input := map[string]string{}
+	err := json.NewDecoder(r.Body).Decode(&input)
+	if err != nil {
+		srv.sendError(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	value, ok := input["value"]
+	if !ok {
+		srv.sendError(w, noValueKeyError, http.StatusBadRequest)
+		return
+	}
+
+	st := http.StatusOK
+	err = srv.db.UpdateTag(hostname, key, value)
+
+	if err != nil {
+		if err == noHostInDatabaseError {
+			srv.sendNotFound(w, "no such host")
+			return
+		}
+		srv.sendError(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Location", srv.prefix+"/"+hostname+"/tags/"+key)
+	srv.sendJSON(w, map[string]string{"value": value}, st)
+}
+
+func (srv *server) deleteHostTag(w http.ResponseWriter, r *http.Request) {
+	if !srv.isAuthed(r) {
+		srv.sendUnauthorized(w)
+		return
+	}
+
+	vars := mux.Vars(r)
+
+	hostname, ok := vars["hostname"]
+	if !ok {
+		srv.sendError(w, noHostnameInPathError, http.StatusBadRequest)
+		return
+	}
+
+	key, ok := vars["key"]
+	if !ok {
+		srv.sendError(w, noKeyInPathError, http.StatusBadRequest)
+		return
+	}
+
+	err := srv.db.DeleteTag(hostname, key)
+	if err != nil {
+		srv.sendError(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Location", srv.prefix+"/"+hostname+"/tags/"+key)
 	srv.sendJSON(w, "", http.StatusNoContent)
 }
