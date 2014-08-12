@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/negroni"
@@ -171,7 +172,16 @@ func (srv *server) handlePing(w http.ResponseWriter, r *http.Request) {
 }
 
 func (srv *server) getHostInventory(w http.ResponseWriter, r *http.Request) {
-	hosts, err := srv.db.ReadAllHosts()
+	hf := &hostFilter{
+		Name: r.FormValue("name"),
+		Env:  r.FormValue("env"),
+		Team: r.FormValue("team"),
+	}
+	srv.log.WithFields(logrus.Fields{
+		"filter": hf,
+	}).Debug("reading hosts with vars and filter")
+
+	hosts, err := srv.db.ReadAllHosts(hf)
 	if err != nil {
 		srv.sendError(w, err, http.StatusInternalServerError)
 		return
@@ -191,7 +201,8 @@ func (srv *server) getHostInventory(w http.ResponseWriter, r *http.Request) {
 					"ansible_python_interpreter", "/usr/bin/python")
 			}
 
-			inv.AddIPToGroup(fmt.Sprintf("type_%s", host.Type.String), host.IP.Addr)
+			inv.AddIPToGroup(fmt.Sprintf("type_%s",
+				strings.ToLower(host.Type.String)), host.IP.Addr)
 		}
 
 		if r.FormValue("exclude-vars") == "" {
@@ -205,7 +216,8 @@ func (srv *server) getHostInventory(w http.ResponseWriter, r *http.Request) {
 				if value.String == "" {
 					continue
 				}
-				invKey := fmt.Sprintf("tag_%s_%s", key, value.String)
+				invKey := fmt.Sprintf("tag_%s_%s",
+					strings.ToLower(key), strings.ToLower(value.String))
 				inv.AddIPToGroup(invKey, host.IP.Addr)
 			}
 		}

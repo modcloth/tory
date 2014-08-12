@@ -396,3 +396,34 @@ func TestHandleDeleteHostVar(t *testing.T) {
 		t.Fatalf("response code is not 404: %v", w.Code)
 	}
 }
+
+func TestHandleFilterHosts(t *testing.T) {
+	h := mustCreateHost(t)
+
+	w := makeRequest("GET", `/ansible/hosts/test?name=`+h.Name, nil, "")
+	if w.Code != 200 {
+		t.Fatalf("response code is not 200: %v", w.Code)
+	}
+
+	res := map[string]json.RawMessage{}
+	err := json.NewDecoder(w.Body).Decode(&res)
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	hostGroup, ok := res[h.Name]
+	if !ok {
+		t.Fatalf("host group not present")
+	}
+
+	hostGroupSlice := []string{}
+	err = json.Unmarshal(hostGroup, &hostGroupSlice)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if len(hostGroupSlice) == 0 {
+		t.Fatalf("host group is empty")
+	}
+}

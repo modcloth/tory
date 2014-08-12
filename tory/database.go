@@ -119,8 +119,19 @@ func (db *database) ReadHost(identifier string) (*host, error) {
 	return h, nil
 }
 
-func (db *database) ReadAllHosts() ([]*host, error) {
-	rows, err := db.conn.Queryx(`SELECT * FROM hosts`)
+func (db *database) ReadAllHosts(hf *hostFilter) ([]*host, error) {
+	query := `SELECT * FROM hosts `
+	whereClause, binds := hf.BuildWhereClause()
+
+	query += whereClause
+
+	db.Log.WithFields(logrus.Fields{
+		"filter": hf,
+		"query":  query,
+		"binds":  binds,
+	}).Debug("getting hosts with query and binds")
+
+	rows, err := db.conn.Queryx(query, binds...)
 	if err != nil {
 		return nil, err
 	}

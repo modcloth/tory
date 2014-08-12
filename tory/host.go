@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	"github.com/lib/pq/hstore"
@@ -84,15 +85,15 @@ func hostJSONToHost(hj *HostJSON) *host {
 	}
 
 	for key, value := range hj.Tags {
-		h.Tags.Map[fmt.Sprintf("%s", key)] = sql.NullString{
-			String: fmt.Sprintf("%s", value),
+		h.Tags.Map[strings.ToLower(fmt.Sprintf("%s", key))] = sql.NullString{
+			String: strings.ToLower(fmt.Sprintf("%s", value)),
 			Valid:  true,
 		}
 	}
 
 	for key, value := range hj.Vars {
-		h.Vars.Map[fmt.Sprintf("%s", key)] = sql.NullString{
-			String: fmt.Sprintf("%s", value),
+		h.Vars.Map[strings.ToLower(fmt.Sprintf("%s", key))] = sql.NullString{
+			String: strings.ToLower(fmt.Sprintf("%s", value)),
 			Valid:  true,
 		}
 	}
@@ -127,10 +128,10 @@ func (h *host) CollapsedVars() map[string]string {
 	varsMap := map[string]string{}
 
 	for key, value := range h.Tags.Map {
-		varsMap[key] = value.String
+		varsMap[strings.ToLower(key)] = strings.ToLower(value.String)
 	}
 	for key, value := range h.Vars.Map {
-		varsMap[key] = value.String
+		varsMap[strings.ToLower(key)] = strings.ToLower(value.String)
 	}
 
 	return varsMap
