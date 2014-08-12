@@ -60,7 +60,6 @@ def main(sysargs=sys.argv[:]):
     if args.env:
         query += '&env={}'.format(args.env)
 
-
     url = urlparse.urlunparse(
         urlparse.ParseResult(scheme, netloc, path, params, query, fragment)
     )
