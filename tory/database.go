@@ -87,13 +87,7 @@ func (db *database) CreateHost(h *host) error {
 		return err
 	}
 
-	row := stmt.QueryRowx(h)
-	if row == nil {
-		defer tx.Rollback()
-		return createHostFailedError
-	}
-
-	err = row.StructScan(h)
+	err = stmt.QueryRowx(h).StructScan(h)
 	if err != nil {
 		errFields := logrus.Fields{"err": err}
 		if err == sql.ErrNoRows {
@@ -110,16 +104,15 @@ func (db *database) CreateHost(h *host) error {
 }
 
 func (db *database) ReadHost(identifier string) (*host, error) {
-	row := db.conn.QueryRowx(`
-		SELECT * FROM hosts
-		WHERE name = $1 OR host(ip) = $1`, identifier)
-	if row == nil {
-		return nil, noHostInDatabaseError
-	}
-
 	h := newHost()
-	err := row.StructScan(h)
+	err := db.conn.QueryRowx(`
+		SELECT * FROM hosts
+		WHERE name = $1 OR host(ip) = $1`, identifier).StructScan(h)
+
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, noHostInDatabaseError
+		}
 		return nil, err
 	}
 
@@ -169,25 +162,20 @@ func (db *database) UpdateHost(h *host) error {
 		return err
 	}
 
-	row := stmt.QueryRowx(h)
-	if row == nil {
-		defer tx.Rollback()
-		return noHostInDatabaseError
-	}
-
-	err = row.StructScan(h)
+	err = stmt.QueryRowx(h).StructScan(h)
 	if err != nil {
 		errFields := logrus.Fields{"err": err}
+		defer tx.Rollback()
 		if err == sql.ErrNoRows {
 			// this is not considered an error because the server update is
 			// doing a bit of tell-don't-ask in order to fall back to host
 			// creation
 			db.Log.WithFields(errFields).Warn("failed to update host")
+			return noHostInDatabaseError
 		} else {
 			db.Log.WithFields(errFields).Warn("failed to scan struct")
+			return err
 		}
-		defer tx.Rollback()
-		return err
 	}
 
 	db.Log.WithField("host", h).Info("updated host")
@@ -200,13 +188,13 @@ func (db *database) DeleteHost(name string) error {
 		return err
 	}
 
-	row := stmt.QueryRowx(name)
-	if row == nil {
+	one := 0
+	err = stmt.QueryRowx(name).Scan(&one)
+	if err != nil && err == sql.ErrNoRows {
 		return noHostInDatabaseError
 	}
 
-	one := 0
-	return row.Scan(&one)
+	return err
 }
 
 func (db *database) ReadVar(name, key string) (string, error) {
@@ -215,14 +203,12 @@ func (db *database) ReadVar(name, key string) (string, error) {
 		return "", err
 	}
 
-	row := stmt.QueryRowx(name, key)
-	if row == nil {
-		return "", noHostInDatabaseError
-	}
-
 	value := sql.NullString{}
-	err = row.Scan(&value)
+	err = stmt.QueryRowx(name, key).Scan(&value)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return "", noHostInDatabaseError
+		}
 		return "", err
 	}
 
@@ -241,21 +227,21 @@ func (db *database) UpdateVar(hostname, key, value string) error {
 		return err
 	}
 
-	row := stmt.QueryRowx(hostname, &hstore.Hstore{
+	id := 0
+	err = stmt.QueryRowx(hostname, &hstore.Hstore{
 		Map: map[string]sql.NullString{
 			key: sql.NullString{
 				String: value,
 				Valid:  true,
 			},
 		},
-	})
+	}).Scan(&id)
 
-	if row == nil {
+	if err != nil && err == sql.ErrNoRows {
 		return noHostInDatabaseError
 	}
 
-	id := 0
-	return row.Scan(&id)
+	return err
 }
 
 func (db *database) DeleteVar(hostname, key string) error {
@@ -266,13 +252,13 @@ func (db *database) DeleteVar(hostname, key string) error {
 		return err
 	}
 
-	row := stmt.QueryRowx(hostname, key)
-	if row == nil {
+	id := 0
+	err = stmt.QueryRowx(hostname, key).Scan(&id)
+	if err != nil && err == sql.ErrNoRows {
 		return noHostInDatabaseError
 	}
 
-	id := 0
-	return row.Scan(&id)
+	return err
 }
 
 func (db *database) Setup() error {

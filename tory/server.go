@@ -295,7 +295,7 @@ func (srv *server) updateHost(w http.ResponseWriter, r *http.Request) {
 	st := http.StatusOK
 	err = srv.db.UpdateHost(h)
 	if err != nil {
-		if err != noHostInDatabaseError {
+		if err == noHostInDatabaseError {
 			srv.log.WithFields(logrus.Fields{
 				"host": h.Name,
 			}).Info("failed to update, so trying to create instead")
