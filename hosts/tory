@@ -14,13 +14,25 @@ except ImportError:
 
 
 def main(sysargs=sys.argv[:]):
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--host', dest='hostname')
-    parser.add_argument('--list', dest='list_only', action='store_true')
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
+    parser.add_argument(
+        '--host',
+        dest='hostname',
+        help='only show the given host'
+    )
+    parser.add_argument(
+        '--list',
+        dest='list_only',
+        action='store_true',
+        help='only list the hosts, excluding hostvars'
+    )
     parser.add_argument(
         '-s',
         '--tory-server',
         metavar='TORY_SERVER',
+        help='full hostname and path to tory server',
         default=os.environ.get(
             'TORY_SERVER', 'http://localhost:9462/ansible/hosts'
         )
