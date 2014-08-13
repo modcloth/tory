@@ -234,7 +234,12 @@ func (db *database) ReadVarOrTag(which, name, key string) (string, error) {
 	}
 
 	if !v.Value.Valid {
-		return "", noVarError
+		switch which {
+		case "vars":
+			return "", noVarError
+		case "tags":
+			return "", noTagError
+		}
 	}
 
 	return v.Value.String, nil
