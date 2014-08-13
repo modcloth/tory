@@ -227,25 +227,6 @@ func (srv *server) getHostInventory(w http.ResponseWriter, r *http.Request) {
 	srv.sendJSON(w, inv, http.StatusOK)
 }
 
-func (srv *server) addHostToInventory(w http.ResponseWriter, r *http.Request) {
-	hj, err := hostJSONFromHTTPBody(r.Body)
-	if err != nil {
-		srv.sendError(w, err, http.StatusBadRequest)
-		return
-	}
-
-	h := hostJSONToHost(hj)
-	err = srv.db.CreateHost(h)
-	if err != nil {
-		srv.sendError(w, err, http.StatusBadRequest)
-		return
-	}
-
-	hj.ID = h.ID
-	w.Header().Set("Location", path.Join(srv.prefix, hj.Name))
-	srv.sendJSON(w, map[string]*HostJSON{"host": hj}, http.StatusCreated)
-}
-
 func (srv *server) getHost(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	hostname, ok := vars["hostname"]
@@ -306,13 +287,13 @@ func (srv *server) updateHost(w http.ResponseWriter, r *http.Request) {
 	}).Debug("attempting to update host")
 
 	st := http.StatusOK
-	err = srv.db.UpdateHost(h)
+	hu, err := srv.db.UpdateHost(h)
 	if err != nil {
 		if err == noHostInDatabaseError {
 			srv.log.WithFields(logrus.Fields{
 				"host": h.Name,
 			}).Info("failed to update, so trying to create instead")
-			err = srv.db.CreateHost(h)
+			hu, err = srv.db.CreateHost(h)
 			st = http.StatusCreated
 		} else {
 			err = nil
@@ -324,10 +305,9 @@ func (srv *server) updateHost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hj.ID = h.ID
-
-	w.Header().Set("Location", path.Join(srv.prefix, hj.Name))
-	srv.sendJSON(w, &HostPayload{Host: hj}, st)
+	huj := hostToHostJSON(hu)
+	w.Header().Set("Location", path.Join(srv.prefix, hu.Name))
+	srv.sendJSON(w, &HostPayload{Host: huj}, st)
 }
 
 func (srv *server) deleteHost(w http.ResponseWriter, r *http.Request) {

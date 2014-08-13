@@ -81,10 +81,10 @@ func newDatabase(urlString string, migrations map[string][]string) (*database, e
 	return db, nil
 }
 
-func (db *database) CreateHost(h *host) error {
+func (db *database) CreateHost(h *host) (*host, error) {
 	tx, err := db.conn.Beginx()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	stmt, err := tx.PrepareNamed(`
@@ -93,7 +93,7 @@ func (db *database) CreateHost(h *host) error {
 		RETURNING id`)
 	if err != nil {
 		defer tx.Rollback()
-		return err
+		return nil, err
 	}
 
 	err = stmt.Get(h, h)
@@ -105,11 +105,16 @@ func (db *database) CreateHost(h *host) error {
 			db.Log.WithFields(errFields).Warn("failed to scan struct")
 		}
 		defer tx.Rollback()
-		return err
+		return nil, err
 	}
 
 	db.Log.WithField("host", h).Info("created host")
-	return tx.Commit()
+	err = tx.Commit()
+	if err != nil {
+		return nil, err
+	}
+
+	return db.ReadHost(h.Name)
 }
 
 func (db *database) ReadHost(identifier string) (*host, error) {
@@ -164,22 +169,22 @@ func (db *database) ReadAllHosts(hf *hostFilter) ([]*host, error) {
 	return hosts, nil
 }
 
-func (db *database) UpdateHost(h *host) error {
+func (db *database) UpdateHost(h *host) (*host, error) {
 	tx, err := db.conn.Beginx()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	stmt, err := tx.PrepareNamed(`
 		UPDATE hosts
-		SET package = :package, image = :image, type = :type,
-		    ip = :ip, tags = :tags, vars = :vars
+		SET package = :package, image = :image, type = :type, ip = :ip,
+			tags = tags || :tags, vars = vars || :vars
 		WHERE name = :name
 		RETURNING id`)
 
 	if err != nil {
 		defer tx.Rollback()
-		return err
+		return nil, err
 	}
 
 	err = stmt.Get(h, h)
@@ -191,15 +196,20 @@ func (db *database) UpdateHost(h *host) error {
 			// doing a bit of tell-don't-ask in order to fall back to host
 			// creation
 			db.Log.WithFields(errFields).Warn("failed to update host")
-			return noHostInDatabaseError
+			return nil, noHostInDatabaseError
 		} else {
 			db.Log.WithFields(errFields).Warn("failed to scan struct")
-			return err
+			return nil, err
 		}
 	}
 
 	db.Log.WithField("host", h).Info("updated host")
-	return tx.Commit()
+	err = tx.Commit()
+	if err != nil {
+		return nil, err
+	}
+
+	return db.ReadHost(h.Name)
 }
 
 func (db *database) DeleteHost(name string) error {
