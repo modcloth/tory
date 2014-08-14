@@ -85,6 +85,15 @@ auth*)
 * `GET /ping` - returns PONG
 * `GET /debug/vars` - returns vars JSON as exposed by expvar
 
+### authorization
+
+All of the API methods that require authorization will expect it in the form of
+an `Authorization: token` header, e.g.:
+
+```
+Authorization: token abc123
+```
+
 ### `host` JSON
 
 Tory uses the following JSON format to represent a host:
