@@ -219,6 +219,7 @@ func TestHandleUpdateHost(t *testing.T) {
 	}
 
 	h.ID = hj.ID
+	delete(h.Tags, "role")
 
 	newIP := fmt.Sprintf("10.10.3.%d", rand.Intn(255))
 	h.IP = newIP
@@ -234,7 +235,9 @@ func TestHandleUpdateHost(t *testing.T) {
 		t.Error(err)
 	}
 
-	fmt.Printf("%#v\n", hj)
+	if _, ok := hj.Tags["role"]; !ok {
+		t.Fatalf("role tag was not retained on update, tags=%#v", hj.Tags)
+	}
 
 	if hj.ID != h.ID {
 		t.Fatalf("outgoing id does not match: %v != %v", hj.ID, h.ID)

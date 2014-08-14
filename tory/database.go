@@ -81,10 +81,10 @@ func newDatabase(urlString string, migrations map[string][]string) (*database, e
 	return db, nil
 }
 
-func (db *database) CreateHost(h *host) error {
+func (db *database) CreateHost(h *host) (*host, error) {
 	tx, err := db.conn.Beginx()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	stmt, err := tx.PrepareNamed(`
@@ -93,7 +93,7 @@ func (db *database) CreateHost(h *host) error {
 		RETURNING id`)
 	if err != nil {
 		defer tx.Rollback()
-		return err
+		return nil, err
 	}
 
 	err = stmt.Get(h, h)
@@ -105,11 +105,16 @@ func (db *database) CreateHost(h *host) error {
 			db.Log.WithFields(errFields).Warn("failed to scan struct")
 		}
 		defer tx.Rollback()
-		return err
+		return nil, err
 	}
 
 	db.Log.WithField("host", h).Info("created host")
-	return tx.Commit()
+	err = tx.Commit()
+	if err != nil {
+		return nil, err
+	}
+
+	return db.ReadHost(h.Name)
 }
 
 func (db *database) ReadHost(identifier string) (*host, error) {
@@ -164,22 +169,22 @@ func (db *database) ReadAllHosts(hf *hostFilter) ([]*host, error) {
 	return hosts, nil
 }
 
-func (db *database) UpdateHost(h *host) error {
+func (db *database) UpdateHost(h *host) (*host, error) {
 	tx, err := db.conn.Beginx()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	stmt, err := tx.PrepareNamed(`
 		UPDATE hosts
-		SET package = :package, image = :image, type = :type,
-		    ip = :ip, tags = :tags, vars = :vars
+		SET package = :package, image = :image, type = :type, ip = :ip,
+			tags = tags || :tags, vars = vars || :vars
 		WHERE name = :name
 		RETURNING id`)
 
 	if err != nil {
 		defer tx.Rollback()
-		return err
+		return nil, err
 	}
 
 	err = stmt.Get(h, h)
@@ -191,15 +196,20 @@ func (db *database) UpdateHost(h *host) error {
 			// doing a bit of tell-don't-ask in order to fall back to host
 			// creation
 			db.Log.WithFields(errFields).Warn("failed to update host")
-			return noHostInDatabaseError
+			return nil, noHostInDatabaseError
 		} else {
 			db.Log.WithFields(errFields).Warn("failed to scan struct")
-			return err
+			return nil, err
 		}
 	}
 
 	db.Log.WithField("host", h).Info("updated host")
-	return tx.Commit()
+	err = tx.Commit()
+	if err != nil {
+		return nil, err
+	}
+
+	return db.ReadHost(h.Name)
 }
 
 func (db *database) DeleteHost(name string) error {
@@ -217,8 +227,9 @@ func (db *database) DeleteHost(name string) error {
 	return err
 }
 
-func (db *database) ReadVar(name, key string) (string, error) {
-	stmt, err := db.conn.Preparex(`SELECT vars -> $2 AS value FROM hosts WHERE name = $1`)
+func (db *database) ReadVarOrTag(which, name, key string) (string, error) {
+	stmt, err := db.conn.Preparex(fmt.Sprintf(`
+		SELECT %s -> $2 AS value FROM hosts WHERE name = $1`, which))
 	if err != nil {
 		return "", err
 	}
@@ -233,116 +244,83 @@ func (db *database) ReadVar(name, key string) (string, error) {
 	}
 
 	if !v.Value.Valid {
-		return "", noVarError
+		switch which {
+		case "vars":
+			return "", noVarError
+		case "tags":
+			return "", noTagError
+		}
 	}
 
 	return v.Value.String, nil
+}
+
+func (db *database) UpdateVarOrTag(which, hostname, key, value string) error {
+	stmt, err := db.conn.Preparex(fmt.Sprintf(`
+		UPDATE hosts SET %s = %s || $2 WHERE name = $1 RETURNING id`,
+		which, which))
+
+	if err != nil {
+		return err
+	}
+
+	id := &idRow{}
+	err = stmt.Get(id, hostname, &hstore.Hstore{
+		Map: map[string]sql.NullString{
+			key: sql.NullString{
+				String: value,
+				Valid:  true,
+			},
+		},
+	})
+
+	if err != nil && err == sql.ErrNoRows {
+		return noHostInDatabaseError
+	}
+
+	return err
+}
+
+func (db *database) DeleteVarOrTag(which, hostname, key string) error {
+	stmt, err := db.conn.Preparex(fmt.Sprintf(`
+		UPDATE hosts SET %s = delete(%s, $2) WHERE name = $1 RETURNING id`,
+		which, which))
+
+	if err != nil {
+		return err
+	}
+
+	id := &idRow{}
+	err = stmt.Get(id, hostname, key)
+	if err != nil && err == sql.ErrNoRows {
+		return noHostInDatabaseError
+	}
+
+	return err
+}
+
+func (db *database) ReadVar(name, key string) (string, error) {
+	return db.ReadVarOrTag("vars", name, key)
 }
 
 func (db *database) UpdateVar(hostname, key, value string) error {
-	stmt, err := db.conn.Preparex(`
-		UPDATE hosts SET vars = vars || $2 WHERE name = $1 RETURNING id`)
-
-	if err != nil {
-		return err
-	}
-
-	id := &idRow{}
-	err = stmt.Get(id, hostname, &hstore.Hstore{
-		Map: map[string]sql.NullString{
-			key: sql.NullString{
-				String: value,
-				Valid:  true,
-			},
-		},
-	})
-
-	if err != nil && err == sql.ErrNoRows {
-		return noHostInDatabaseError
-	}
-
-	return err
+	return db.UpdateVarOrTag("vars", hostname, key, value)
 }
 
 func (db *database) DeleteVar(hostname, key string) error {
-	stmt, err := db.conn.Preparex(`
-		UPDATE hosts SET vars = delete(vars, $2) WHERE name = $1 RETURNING id`)
-
-	if err != nil {
-		return err
-	}
-
-	id := &idRow{}
-	err = stmt.Get(id, hostname, key)
-	if err != nil && err == sql.ErrNoRows {
-		return noHostInDatabaseError
-	}
-
-	return err
+	return db.DeleteVarOrTag("vars", hostname, key)
 }
 
 func (db *database) ReadTag(name, key string) (string, error) {
-	stmt, err := db.conn.Preparex(`SELECT tags -> $2 AS value FROM hosts WHERE name = $1`)
-	if err != nil {
-		return "", err
-	}
-
-	v := &valueRow{Value: sql.NullString{}}
-	err = stmt.Get(v, name, key)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return "", noHostInDatabaseError
-		}
-		return "", err
-	}
-
-	if !v.Value.Valid {
-		return "", noTagError
-	}
-
-	return v.Value.String, nil
+	return db.ReadVarOrTag("tags", name, key)
 }
 
 func (db *database) UpdateTag(hostname, key, value string) error {
-	stmt, err := db.conn.Preparex(`
-		UPDATE hosts SET tags = tags || $2 WHERE name = $1 RETURNING id`)
-
-	if err != nil {
-		return err
-	}
-
-	id := &idRow{}
-	err = stmt.Get(id, hostname, &hstore.Hstore{
-		Map: map[string]sql.NullString{
-			key: sql.NullString{
-				String: value,
-				Valid:  true,
-			},
-		},
-	})
-
-	if err != nil && err == sql.ErrNoRows {
-		return noHostInDatabaseError
-	}
-
-	return err
+	return db.UpdateVarOrTag("tags", hostname, key, value)
 }
 
 func (db *database) DeleteTag(hostname, key string) error {
-	stmt, err := db.conn.Preparex(`
-		UPDATE hosts SET tags = delete(tags, $2) WHERE name = $1 RETURNING id`)
-
-	if err != nil {
-		return err
-	}
-
-	id := &idRow{}
-	err = stmt.Get(id, hostname, key)
-	if err != nil && err == sql.ErrNoRows {
-		return noHostInDatabaseError
-	}
-
-	return err
+	return db.DeleteVarOrTag("tags", hostname, key)
 }
 
 func (db *database) Setup() error {
