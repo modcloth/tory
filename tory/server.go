@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path"
+	"strings"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/negroni"
@@ -18,6 +20,8 @@ var (
 
 	mismatchedHostError   = fmt.Errorf("host in body does not match path")
 	noHostnameInPathError = fmt.Errorf("no hostname in PATH_INFO")
+	noKeyInPathError      = fmt.Errorf("no key in PATH_INFO")
+	noValueKeyError       = fmt.Errorf("no value key in payload")
 )
 
 func init() {
@@ -101,12 +105,18 @@ func (srv *server) Setup(opts *ServerOptions) {
 	srv.db.Log = srv.log
 
 	srv.r.HandleFunc(srv.prefix, srv.getHostInventory).Methods("GET")
+	srv.r.HandleFunc(srv.prefix+`/{hostname}/tags/{key}`, srv.getHostTag).Methods("GET")
+	srv.r.HandleFunc(srv.prefix+`/{hostname}/tags/{key}`, srv.updateHostTag).Methods("PUT")
+	srv.r.HandleFunc(srv.prefix+`/{hostname}/tags/{key}`, srv.deleteHostTag).Methods("DELETE")
+	srv.r.HandleFunc(srv.prefix+`/{hostname}/vars/{key}`, srv.getHostVar).Methods("GET")
+	srv.r.HandleFunc(srv.prefix+`/{hostname}/vars/{key}`, srv.updateHostVar).Methods("PUT")
+	srv.r.HandleFunc(srv.prefix+`/{hostname}/vars/{key}`, srv.deleteHostVar).Methods("DELETE")
+	//	srv.r.HandleFunc(srv.prefix+`/{hostname}/{key}`, srv.getHostKey).Methods("GET")
+	//	srv.r.HandleFunc(srv.prefix+`/{hostname}/{key}`, srv.updateHostKey).Methods("PUT")
+	//	srv.r.HandleFunc(srv.prefix+`/{hostname}/{key}`, srv.deleteHostKey).Methods("DELETE")
 	srv.r.HandleFunc(srv.prefix+`/{hostname}`, srv.getHost).Methods("GET")
 	srv.r.HandleFunc(srv.prefix+`/{hostname}`, srv.updateHost).Methods("PUT")
 	srv.r.HandleFunc(srv.prefix+`/{hostname}`, srv.deleteHost).Methods("DELETE")
-	srv.r.HandleFunc(srv.prefix+`/{hostname}/{key:.*}`, srv.getHostKey).Methods("GET")
-	srv.r.HandleFunc(srv.prefix+`/{hostname}/{key:.*}`, srv.updateHostKey).Methods("PUT")
-	srv.r.HandleFunc(srv.prefix+`/{hostname}/{key:.*}`, srv.deleteHostKey).Methods("DELETE")
 
 	srv.r.HandleFunc(`/ping`, srv.handlePing).Methods("GET", "HEAD")
 	srv.r.HandleFunc(`/debug/vars`, expvarplus.HandleExpvars).Methods("GET")
@@ -120,6 +130,10 @@ func (srv *server) Setup(opts *ServerOptions) {
 
 func (srv *server) Run(addr string) {
 	srv.n.Run(addr)
+}
+
+func (srv *server) sendNotFound(w http.ResponseWriter, msg string) {
+	srv.sendJSON(w, map[string]string{"message": msg}, http.StatusNotFound)
 }
 
 func (srv *server) sendError(w http.ResponseWriter, err error, status int) {
@@ -140,9 +154,12 @@ func (srv *server) sendJSON(w http.ResponseWriter, j interface{}, status int) {
 		srv.sendError(w, err, http.StatusInternalServerError)
 	}
 
+	jsonString := string(jsonBytes) + "\n"
+
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("Content-Length", fmt.Sprintf("%d", len(jsonString)))
 	w.WriteHeader(status)
-	fmt.Fprintf(w, string(jsonBytes)+"\n")
+	fmt.Fprintf(w, jsonString)
 }
 
 func (srv *server) isAuthed(r *http.Request) bool {
@@ -156,7 +173,16 @@ func (srv *server) handlePing(w http.ResponseWriter, r *http.Request) {
 }
 
 func (srv *server) getHostInventory(w http.ResponseWriter, r *http.Request) {
-	hosts, err := srv.db.ReadAllHosts()
+	hf := &hostFilter{
+		Name: r.FormValue("name"),
+		Env:  r.FormValue("env"),
+		Team: r.FormValue("team"),
+	}
+	srv.log.WithFields(logrus.Fields{
+		"filter": hf,
+	}).Debug("reading hosts with vars and filter")
+
+	hosts, err := srv.db.ReadAllHosts(hf)
 	if err != nil {
 		srv.sendError(w, err, http.StatusInternalServerError)
 		return
@@ -176,7 +202,8 @@ func (srv *server) getHostInventory(w http.ResponseWriter, r *http.Request) {
 					"ansible_python_interpreter", "/usr/bin/python")
 			}
 
-			inv.AddIPToGroup(fmt.Sprintf("type_%s", host.Type.String), host.IP.Addr)
+			inv.AddIPToGroup(fmt.Sprintf("type_%s",
+				strings.ToLower(host.Type.String)), host.IP.Addr)
 		}
 
 		if r.FormValue("exclude-vars") == "" {
@@ -190,32 +217,14 @@ func (srv *server) getHostInventory(w http.ResponseWriter, r *http.Request) {
 				if value.String == "" {
 					continue
 				}
-				invKey := fmt.Sprintf("tag_%s_%s", key, value.String)
+				invKey := fmt.Sprintf("tag_%s_%s",
+					strings.ToLower(key), strings.ToLower(value.String))
 				inv.AddIPToGroup(invKey, host.IP.Addr)
 			}
 		}
 	}
 
 	srv.sendJSON(w, inv, http.StatusOK)
-}
-
-func (srv *server) addHostToInventory(w http.ResponseWriter, r *http.Request) {
-	hj, err := hostJSONFromHTTPBody(r.Body)
-	if err != nil {
-		srv.sendError(w, err, http.StatusBadRequest)
-		return
-	}
-
-	h := hostJSONToHost(hj)
-	err = srv.db.CreateHost(h)
-	if err != nil {
-		srv.sendError(w, err, http.StatusBadRequest)
-		return
-	}
-
-	hj.ID = h.ID
-	w.Header().Set("Location", srv.prefix+"/"+hj.Name)
-	srv.sendJSON(w, map[string]*HostJSON{"host": hj}, http.StatusCreated)
 }
 
 func (srv *server) getHost(w http.ResponseWriter, r *http.Request) {
@@ -229,11 +238,11 @@ func (srv *server) getHost(w http.ResponseWriter, r *http.Request) {
 	h, err := srv.db.ReadHost(hostname)
 	srv.log.WithField("host", fmt.Sprintf("%#v", h)).Info("got back the host")
 	if err != nil {
-		srv.sendError(w, err, http.StatusNotFound)
+		srv.sendNotFound(w, "no such host")
 		return
 	}
 
-	w.Header().Set("Location", srv.prefix+"/"+h.Name)
+	w.Header().Set("Location", path.Join(srv.prefix, h.Name))
 	srv.log.Info("sending back some json now")
 
 	if r.FormValue("vars-only") != "" {
@@ -257,15 +266,12 @@ func (srv *server) updateHost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	srv.log.WithField("vars", vars).Debug("beginning host update handling")
-	srv.log.WithField("hostname", hostname).Debug("here's the hostname")
 
 	hj, err := hostJSONFromHTTPBody(r.Body)
 	if err != nil {
 		srv.sendError(w, err, http.StatusBadRequest)
 		return
 	}
-
-	srv.log.WithField("hj", hj).Debug("here's hj")
 
 	if hj.Name != hostname {
 		srv.sendError(w, mismatchedHostError, http.StatusBadRequest)
@@ -281,13 +287,13 @@ func (srv *server) updateHost(w http.ResponseWriter, r *http.Request) {
 	}).Debug("attempting to update host")
 
 	st := http.StatusOK
-	err = srv.db.UpdateHost(h)
+	hu, err := srv.db.UpdateHost(h)
 	if err != nil {
-		if err != noHostInDatabaseError {
+		if err == noHostInDatabaseError {
 			srv.log.WithFields(logrus.Fields{
 				"host": h.Name,
 			}).Info("failed to update, so trying to create instead")
-			err = srv.db.CreateHost(h)
+			hu, err = srv.db.CreateHost(h)
 			st = http.StatusCreated
 		} else {
 			err = nil
@@ -299,11 +305,9 @@ func (srv *server) updateHost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hj.ID = h.ID
-
-	w.Header().Set("Location", srv.prefix+"/"+hj.Name)
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	srv.sendJSON(w, &HostPayload{Host: hj}, st)
+	huj := hostToHostJSON(hu)
+	w.Header().Set("Location", path.Join(srv.prefix, hu.Name))
+	srv.sendJSON(w, &HostPayload{Host: huj}, st)
 }
 
 func (srv *server) deleteHost(w http.ResponseWriter, r *http.Request) {
@@ -312,27 +316,177 @@ func (srv *server) deleteHost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Error(w, "NOPE, cannot delete host", http.StatusNotImplemented)
+	vars := mux.Vars(r)
+	hostname, ok := vars["hostname"]
+	if !ok {
+		srv.sendError(w, noHostnameInPathError, http.StatusBadRequest)
+		return
+	}
+
+	srv.log.WithField("vars", vars).Debug("beginning host delete handling")
+
+	err := srv.db.DeleteHost(hostname)
+	if err != nil {
+		if err == noHostInDatabaseError {
+			srv.sendNotFound(w, "no such host")
+			return
+		} else {
+			srv.sendError(w, err, http.StatusInternalServerError)
+			return
+		}
+	}
+
+	w.Header().Set("Location", path.Join(srv.prefix, hostname))
+	srv.sendJSON(w, "", http.StatusNoContent)
 }
 
-func (srv *server) getHostKey(w http.ResponseWriter, r *http.Request) {
-	http.Error(w, "NOPE, no host key", http.StatusNotImplemented)
+func (srv *server) getHostKey(keyType string, w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	hostname, ok := vars["hostname"]
+	if !ok {
+		srv.sendError(w, noHostnameInPathError, http.StatusBadRequest)
+		return
+	}
+
+	key, ok := vars["key"]
+	if !ok {
+		srv.sendError(w, noKeyInPathError, http.StatusBadRequest)
+		return
+	}
+
+	var (
+		err   error
+		value string
+	)
+	switch keyType {
+	case "vars":
+		value, err = srv.db.ReadVar(hostname, key)
+	case "tags":
+		value, err = srv.db.ReadTag(hostname, key)
+	}
+	if err != nil {
+		if err == noTagError || err == noVarError {
+			srv.sendNotFound(w, fmt.Sprintf("could not find %q", key))
+			return
+		}
+		srv.sendError(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Location", path.Join(srv.prefix, hostname, keyType, key))
+	srv.sendJSON(w, map[string]string{"value": value}, http.StatusOK)
 }
 
-func (srv *server) updateHostKey(w http.ResponseWriter, r *http.Request) {
+func (srv *server) updateHostKey(keyType string, w http.ResponseWriter, r *http.Request) {
 	if !srv.isAuthed(r) {
 		srv.sendUnauthorized(w)
 		return
 	}
 
-	http.Error(w, "NOPE, no host key", http.StatusNotImplemented)
+	vars := mux.Vars(r)
+
+	hostname, ok := vars["hostname"]
+	if !ok {
+		srv.sendError(w, noHostnameInPathError, http.StatusBadRequest)
+		return
+	}
+
+	key, ok := vars["key"]
+	if !ok {
+		srv.sendError(w, noKeyInPathError, http.StatusBadRequest)
+		return
+	}
+
+	input := map[string]string{}
+	err := json.NewDecoder(r.Body).Decode(&input)
+	if err != nil {
+		srv.sendError(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	value, ok := input["value"]
+	if !ok {
+		srv.sendError(w, noValueKeyError, http.StatusBadRequest)
+		return
+	}
+
+	st := http.StatusOK
+	switch keyType {
+	case "vars":
+		err = srv.db.UpdateVar(hostname, key, value)
+	case "tags":
+		err = srv.db.UpdateTag(hostname, key, value)
+	}
+
+	if err != nil {
+		if err == noHostInDatabaseError {
+			srv.sendNotFound(w, "no such host")
+			return
+		}
+		srv.sendError(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Location", path.Join(srv.prefix, hostname, keyType, key))
+	srv.sendJSON(w, map[string]string{"value": value}, st)
 }
 
-func (srv *server) deleteHostKey(w http.ResponseWriter, r *http.Request) {
+func (srv *server) deleteHostKey(keyType string, w http.ResponseWriter, r *http.Request) {
 	if !srv.isAuthed(r) {
 		srv.sendUnauthorized(w)
 		return
 	}
 
-	http.Error(w, "NOPE, cannot delete host key", http.StatusNotImplemented)
+	vars := mux.Vars(r)
+
+	hostname, ok := vars["hostname"]
+	if !ok {
+		srv.sendError(w, noHostnameInPathError, http.StatusBadRequest)
+		return
+	}
+
+	key, ok := vars["key"]
+	if !ok {
+		srv.sendError(w, noKeyInPathError, http.StatusBadRequest)
+		return
+	}
+
+	var err error
+	switch keyType {
+	case "vars":
+		err = srv.db.DeleteVar(hostname, key)
+	case "tags":
+		err = srv.db.DeleteTag(hostname, key)
+	}
+	if err != nil {
+		srv.sendError(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Location", path.Join(srv.prefix, hostname, keyType, key))
+	srv.sendJSON(w, "", http.StatusNoContent)
+}
+
+func (srv *server) getHostVar(w http.ResponseWriter, r *http.Request) {
+	srv.getHostKey("vars", w, r)
+}
+
+func (srv *server) updateHostVar(w http.ResponseWriter, r *http.Request) {
+	srv.updateHostKey("vars", w, r)
+}
+
+func (srv *server) deleteHostVar(w http.ResponseWriter, r *http.Request) {
+	srv.deleteHostKey("vars", w, r)
+}
+
+func (srv *server) getHostTag(w http.ResponseWriter, r *http.Request) {
+	srv.getHostKey("tags", w, r)
+}
+
+func (srv *server) updateHostTag(w http.ResponseWriter, r *http.Request) {
+	srv.updateHostKey("tags", w, r)
+}
+
+func (srv *server) deleteHostTag(w http.ResponseWriter, r *http.Request) {
+	srv.deleteHostKey("tags", w, r)
 }

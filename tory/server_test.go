@@ -30,6 +30,10 @@ type hostVars struct {
 	Disk        string `json:"disk"`
 }
 
+type varValue struct {
+	Value string `json:"value"`
+}
+
 func init() {
 	rand.Seed(time.Now().UTC().UnixNano())
 
@@ -88,6 +92,17 @@ func makeRequest(method, urlStr string, body io.Reader, auth string) *httptest.R
 	return w
 }
 
+func mustCreateHost(t *testing.T) *HostJSON {
+	h, reader := getTestHostJSONReader()
+
+	w := makeRequest("PUT", `/ansible/hosts/test/`+h.Name, reader, testAuth)
+	if w.Code != 201 {
+		t.Fatalf("response code is not 201: %v", w.Code)
+	}
+
+	return h
+}
+
 func TestHandlePing(t *testing.T) {
 	w := makeRequest("GET", `/ping`, nil, "")
 	if w.Code != 200 {
@@ -142,14 +157,9 @@ func TestHandleGetHostInventory(t *testing.T) {
 }
 
 func TestHandleGetHost(t *testing.T) {
-	h, reader := getTestHostJSONReader()
+	h := mustCreateHost(t)
 
-	w := makeRequest("PUT", `/ansible/hosts/test/`+h.Name, reader, testAuth)
-	if w.Code != 201 {
-		t.Fatalf("response code is not 201: %v", w.Code)
-	}
-
-	w = makeRequest("GET", `/ansible/hosts/test/`+h.Name, nil, "")
+	w := makeRequest("GET", `/ansible/hosts/test/`+h.Name, nil, "")
 	if w.Code != 200 {
 		t.Fatalf("response code is not 200: %v", w.Code)
 	}
@@ -209,6 +219,7 @@ func TestHandleUpdateHost(t *testing.T) {
 	}
 
 	h.ID = hj.ID
+	delete(h.Tags, "role")
 
 	newIP := fmt.Sprintf("10.10.3.%d", rand.Intn(255))
 	h.IP = newIP
@@ -224,7 +235,9 @@ func TestHandleUpdateHost(t *testing.T) {
 		t.Error(err)
 	}
 
-	fmt.Printf("%#v\n", hj)
+	if _, ok := hj.Tags["role"]; !ok {
+		t.Fatalf("role tag was not retained on update, tags=%#v", hj.Tags)
+	}
 
 	if hj.ID != h.ID {
 		t.Fatalf("outgoing id does not match: %v != %v", hj.ID, h.ID)
@@ -299,5 +312,183 @@ func TestHandleUpdateHostUnauthorized(t *testing.T) {
 	w := makeRequest("PUT", `/ansible/hosts/test/`+h.Name, reader, "bogus")
 	if w.Code != 401 {
 		t.Fatalf("response code is not 401: %v", w.Code)
+	}
+}
+
+func TestHandleDeleteHost(t *testing.T) {
+	h := mustCreateHost(t)
+
+	w := makeRequest("DELETE", `/ansible/hosts/test/`+h.Name, nil, testAuth)
+	if w.Code != 204 {
+		t.Fatalf("response code is not 204: %v", w.Code)
+	}
+
+	w = makeRequest("GET", `/ansible/hosts/test/`+h.Name, nil, "")
+	if w.Code != 404 {
+		t.Fatalf("response code is not 404: %v", w.Code)
+	}
+}
+
+func TestHandleDeleteHostUnauthorized(t *testing.T) {
+	h := mustCreateHost(t)
+
+	w := makeRequest("DELETE", `/ansible/hosts/test/`+h.Name, nil, "bogus")
+	if w.Code != 401 {
+		t.Fatalf("response code is not 401: %v", w.Code)
+	}
+}
+
+func TestHandleGetHostVar(t *testing.T) {
+	h := mustCreateHost(t)
+
+	w := makeRequest("GET", `/ansible/hosts/test/`+h.Name+`/vars/memory`, nil, "")
+	if w.Code != 200 {
+		t.Fatalf("response code is not 200: %v", w.Code)
+	}
+
+	v := &varValue{}
+	err := json.NewDecoder(w.Body).Decode(v)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if v.Value != h.Vars["memory"] {
+		t.Fatalf("outgoing memory does not match: %s != %s", v.Value, h.Vars["memory"])
+	}
+}
+
+func TestHandleUpdateHostVar(t *testing.T) {
+	h := mustCreateHost(t)
+	b, err := json.Marshal(&varValue{Value: "1024"})
+	if err != nil {
+		t.Error(err)
+	}
+
+	r := bytes.NewReader(b)
+	w := makeRequest("PUT", `/ansible/hosts/test/`+h.Name+`/vars/memory`, r, testAuth)
+	if w.Code != 200 {
+		t.Fatalf("response code is not 200: %v", w.Code)
+	}
+
+	w = makeRequest("GET", `/ansible/hosts/test/`+h.Name+`/vars/memory`, nil, "")
+	if w.Code != 200 {
+		t.Fatalf("response code is not 200: %v", w.Code)
+	}
+
+	v := &varValue{}
+	err = json.NewDecoder(w.Body).Decode(v)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if v.Value != "1024" {
+		t.Fatalf("outgoing memory does not match: %s != 1024", v.Value)
+	}
+}
+
+func TestHandleDeleteHostVar(t *testing.T) {
+	h := mustCreateHost(t)
+
+	w := makeRequest("DELETE", `/ansible/hosts/test/`+h.Name+`/vars/memory`, nil, testAuth)
+	if w.Code != 204 {
+		t.Fatalf("response code is not 204: %v", w.Code)
+	}
+
+	w = makeRequest("GET", `/ansible/hosts/test/`+h.Name+`/vars/memory`, nil, "")
+	if w.Code != 404 {
+		t.Fatalf("response code is not 404: %v", w.Code)
+	}
+}
+
+func TestHandleGetHostTag(t *testing.T) {
+	h := mustCreateHost(t)
+
+	w := makeRequest("GET", `/ansible/hosts/test/`+h.Name+`/tags/team`, nil, "")
+	if w.Code != 200 {
+		t.Fatalf("response code is not 200: %v", w.Code)
+	}
+
+	v := &varValue{}
+	err := json.NewDecoder(w.Body).Decode(v)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if v.Value != h.Tags["team"] {
+		t.Fatalf("outgoing team does not match: %s != %s", v.Value, h.Tags["team"])
+	}
+}
+
+func TestHandleUpdateHostTag(t *testing.T) {
+	h := mustCreateHost(t)
+	b, err := json.Marshal(&varValue{Value: "sploop"})
+	if err != nil {
+		t.Error(err)
+	}
+
+	r := bytes.NewReader(b)
+	w := makeRequest("PUT", `/ansible/hosts/test/`+h.Name+`/tags/team`, r, testAuth)
+	if w.Code != 200 {
+		t.Fatalf("response code is not 200: %v", w.Code)
+	}
+
+	w = makeRequest("GET", `/ansible/hosts/test/`+h.Name+`/tags/team`, nil, "")
+	if w.Code != 200 {
+		t.Fatalf("response code is not 200: %v", w.Code)
+	}
+
+	v := &varValue{}
+	err = json.NewDecoder(w.Body).Decode(v)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if v.Value != "sploop" {
+		t.Fatalf("outgoing team does not match: %s != sploop", v.Value)
+	}
+}
+
+func TestHandleDeleteHostTag(t *testing.T) {
+	h := mustCreateHost(t)
+
+	w := makeRequest("DELETE", `/ansible/hosts/test/`+h.Name+`/tags/team`, nil, testAuth)
+	if w.Code != 204 {
+		t.Fatalf("response code is not 204: %v", w.Code)
+	}
+
+	w = makeRequest("GET", `/ansible/hosts/test/`+h.Name+`/tags/team`, nil, "")
+	if w.Code != 404 {
+		t.Fatalf("response code is not 404: %v", w.Code)
+	}
+}
+
+func TestHandleFilterHosts(t *testing.T) {
+	h := mustCreateHost(t)
+
+	w := makeRequest("GET", `/ansible/hosts/test?name=`+h.Name, nil, "")
+	if w.Code != 200 {
+		t.Fatalf("response code is not 200: %v", w.Code)
+	}
+
+	res := map[string]json.RawMessage{}
+	err := json.NewDecoder(w.Body).Decode(&res)
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	hostGroup, ok := res[h.Name]
+	if !ok {
+		t.Fatalf("host group not present")
+	}
+
+	hostGroupSlice := []string{}
+	err = json.Unmarshal(hostGroup, &hostGroupSlice)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if len(hostGroupSlice) == 0 {
+		t.Fatalf("host group is empty")
 	}
 }

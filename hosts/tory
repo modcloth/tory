@@ -14,34 +14,63 @@ except ImportError:
 
 
 def main(sysargs=sys.argv[:]):
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--host', dest='hostname')
-    parser.add_argument('--list', dest='list_only', action='store_true')
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
+    parser.add_argument(
+        '--host',
+        dest='hostname',
+        help='only show the given host'
+    )
+    parser.add_argument(
+        '--list',
+        dest='list_only',
+        action='store_true',
+        help='only list the hosts, excluding hostvars'
+    )
     parser.add_argument(
         '-s',
         '--tory-server',
         metavar='TORY_SERVER',
+        help='full hostname and path to tory server',
         default=os.environ.get(
             'TORY_SERVER', 'http://localhost:9462/ansible/hosts'
         )
+    )
+    parser.add_argument(
+        '-t',
+        '--team',
+        metavar='TEAM',
+        help='filter hosts by the "team" tag',
+        default=os.environ.get('TEAM')
+    )
+    parser.add_argument(
+        '-e',
+        '--env',
+        metavar='NETWORK_ENV',
+        help='filter hosts by the "env" tag',
+        default=os.environ.get('NETWORK_ENV')
     )
 
     args = parser.parse_args(sysargs[1:])
     scheme, netloc, path, params, query, fragment = \
         urlparse.urlparse(args.tory_server)
 
+    if not query:
+        query = '?HERP=DERP'
+
     if args.hostname:
         path += ('/' + args.hostname)
-        if query:
-            query += '&vars-only=1'
-        else:
-            query = 'vars-only=1'
+        query += '&vars-only=1'
 
     elif not args.list_only:
-        if query:
-            query += '&exclude-vars=1'
-        else:
-            query = 'exclude-vars=1'
+        query += '&exclude-vars=1'
+
+    if args.team:
+        query += '&team={}'.format(args.team)
+
+    if args.env:
+        query += '&env={}'.format(args.env)
 
     url = urlparse.urlunparse(
         urlparse.ParseResult(scheme, netloc, path, params, query, fragment)
