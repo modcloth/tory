@@ -48,6 +48,8 @@ CROSS_TARBALLS := \
 	tory-linux-amd64.tar.bz2 \
 	tory-darwin-amd64.tar.bz2 \
 	tory-windows-amd64.tar.bz2
+ALLFILES := $(shell git ls-files)
+PYFILES := $(shell grep -l -E '^\#!/usr/bin/env python' $(ALLFILES))
 
 QUIET ?=
 VERBOSE ?=
@@ -139,7 +141,7 @@ save:
 
 .PHONY: pycheck
 pycheck: .flake8-bootstrap
-	$(FLAKE8) ./hosts/* ./library/* ./bin/*
+	$(FLAKE8) $(PYFILES)
 
 .flake8-bootstrap:
 	(flake8 --version || $(PIP) install flake8) && touch $@
