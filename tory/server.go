@@ -340,7 +340,7 @@ func (srv *server) deleteHost(w http.ResponseWriter, r *http.Request) {
 	srv.sendJSON(w, "", http.StatusNoContent)
 }
 
-func (srv *server) getHostVarOrTag(which string, w http.ResponseWriter, r *http.Request) {
+func (srv *server) getHostKey(keyType string, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	hostname, ok := vars["hostname"]
 	if !ok {
@@ -358,7 +358,7 @@ func (srv *server) getHostVarOrTag(which string, w http.ResponseWriter, r *http.
 		err   error
 		value string
 	)
-	switch which {
+	switch keyType {
 	case "vars":
 		value, err = srv.db.ReadVar(hostname, key)
 	case "tags":
@@ -373,11 +373,11 @@ func (srv *server) getHostVarOrTag(which string, w http.ResponseWriter, r *http.
 		return
 	}
 
-	w.Header().Set("Location", path.Join(srv.prefix, hostname, which, key))
+	w.Header().Set("Location", path.Join(srv.prefix, hostname, keyType, key))
 	srv.sendJSON(w, map[string]string{"value": value}, http.StatusOK)
 }
 
-func (srv *server) updateHostVarOrTag(which string, w http.ResponseWriter, r *http.Request) {
+func (srv *server) updateHostKey(keyType string, w http.ResponseWriter, r *http.Request) {
 	if !srv.isAuthed(r) {
 		srv.sendUnauthorized(w)
 		return
@@ -411,7 +411,7 @@ func (srv *server) updateHostVarOrTag(which string, w http.ResponseWriter, r *ht
 	}
 
 	st := http.StatusOK
-	switch which {
+	switch keyType {
 	case "vars":
 		err = srv.db.UpdateVar(hostname, key, value)
 	case "tags":
@@ -427,11 +427,11 @@ func (srv *server) updateHostVarOrTag(which string, w http.ResponseWriter, r *ht
 		return
 	}
 
-	w.Header().Set("Location", path.Join(srv.prefix, hostname, which, key))
+	w.Header().Set("Location", path.Join(srv.prefix, hostname, keyType, key))
 	srv.sendJSON(w, map[string]string{"value": value}, st)
 }
 
-func (srv *server) deleteHostVarOrTag(which string, w http.ResponseWriter, r *http.Request) {
+func (srv *server) deleteHostKey(keyType string, w http.ResponseWriter, r *http.Request) {
 	if !srv.isAuthed(r) {
 		srv.sendUnauthorized(w)
 		return
@@ -452,7 +452,7 @@ func (srv *server) deleteHostVarOrTag(which string, w http.ResponseWriter, r *ht
 	}
 
 	var err error
-	switch which {
+	switch keyType {
 	case "vars":
 		err = srv.db.DeleteVar(hostname, key)
 	case "tags":
@@ -463,30 +463,30 @@ func (srv *server) deleteHostVarOrTag(which string, w http.ResponseWriter, r *ht
 		return
 	}
 
-	w.Header().Set("Location", path.Join(srv.prefix, hostname, which, key))
+	w.Header().Set("Location", path.Join(srv.prefix, hostname, keyType, key))
 	srv.sendJSON(w, "", http.StatusNoContent)
 }
 
 func (srv *server) getHostVar(w http.ResponseWriter, r *http.Request) {
-	srv.getHostVarOrTag("vars", w, r)
+	srv.getHostKey("vars", w, r)
 }
 
 func (srv *server) updateHostVar(w http.ResponseWriter, r *http.Request) {
-	srv.updateHostVarOrTag("vars", w, r)
+	srv.updateHostKey("vars", w, r)
 }
 
 func (srv *server) deleteHostVar(w http.ResponseWriter, r *http.Request) {
-	srv.deleteHostVarOrTag("vars", w, r)
+	srv.deleteHostKey("vars", w, r)
 }
 
 func (srv *server) getHostTag(w http.ResponseWriter, r *http.Request) {
-	srv.getHostVarOrTag("tags", w, r)
+	srv.getHostKey("tags", w, r)
 }
 
 func (srv *server) updateHostTag(w http.ResponseWriter, r *http.Request) {
-	srv.updateHostVarOrTag("tags", w, r)
+	srv.updateHostKey("tags", w, r)
 }
 
 func (srv *server) deleteHostTag(w http.ResponseWriter, r *http.Request) {
-	srv.deleteHostVarOrTag("tags", w, r)
+	srv.deleteHostKey("tags", w, r)
 }
