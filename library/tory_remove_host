@@ -10,19 +10,14 @@ from ansible.module_utils.basic import *  # noqa
 
 DOCUMENTATION = """
 ---
-module: tory_add_host
+module: tory_remove_host
 description:
-- register a given host in tory
-short_description: register a given host in tory
+- remove a given host from tory
+short_description: remove a given host from tory
 options:
   hostname:
     description:
-    - name of the host to register
-    required: true
-    default: null
-  ip:
-    description:
-    - ip address of the host to register
+    - name of the host to remove
     required: true
     default: null
   auth_token:
@@ -38,32 +33,23 @@ options:
 """
 EXAMPLES = """
 ---
-- name: register this host in tory
+- name: remove this host from tory
   delegate_to: 127.0.0.1
   sudo: false
-  tory_add_host:
+  tory_remove_host:
     hostname={{ ansible_fqdn }}
-    ip={{ ansible_default_ipv4.address }}
-    tag_team=hosers
-    tag_env={{ env }}
-    tag_role={{ primary_role }}
-    var_whatever={{ something_from_somewhere }}
-    var_this_playbook="{{ user }} {{ ansible_date_time.iso8601 }}"
-    var_special=true
 """
 
 HOSTNAME_RE = re.compile(
     "^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]*" +
     "[a-zA-Z0-9])\\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\\-]*[A-Za-z0-9])$"
 )
-IPADDR_RE = re.compile("^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\\.|$)){4}$")
 
 
 def main():
-    module = ToryAddHostModule(
+    module = ToryRemoveHostModule(
         argument_spec=dict(
             hostname=dict(required=True),
-            ip=dict(required=True),
             auth_token=dict(
                 required=False, default=os.environ.get(
                     'TORY_AUTH_TOKEN', 'swordfish'
@@ -83,9 +69,6 @@ def main():
             HOSTNAME_RE.match(params['hostname']) is None:
         module.fail_json(msg='invalid hostname')
 
-    if 'ip' not in params or IPADDR_RE.match(params['ip']) is None:
-        module.fail_json(msg='invalid ip address')
-
     if 'auth_token' not in params:
         module.fail_json(msg='no auth_token provided')
 
@@ -98,41 +81,29 @@ def main():
             'module args (as "tory_server")'
         )
 
-    data = {
-        'name': params['hostname'],
-        'ip': params['ip'],
-        'tags': {},
-        'vars': {}
-    }
-
-    for key, value in params.iteritems():
-        if key.startswith('tag_'):
-            data['tags'][key.replace('tag_', '')] = value
-        if key.startswith('var_'):
-            data['vars'][key.replace('var_', '')] = value
-
     conn = httplib.HTTPConnection(
         url.netloc.split(':')[0], int(url.port or 80)
     )
     conn.request(
-        'PUT', '{}/{}'.format(url.path, params['hostname']),
-        json.dumps({'host': data}),
+        'DELETE', '{}/{}'.format(url.path, params['hostname']),
+        '',
         {
-            'Content-Type': 'application/json',
             'Authorization': 'token {}'.format(params['auth_token'])
         }
     )
     resp = conn.getresponse()
 
-    data['changed'] = True
-    if resp.status not in (201, 200):
-        module.fail_json(msg='failed to register host')
+    data = dict(status=resp.status, failed=False, changed=True)
+    if resp.status not in (204, 404, 200):
+        data['failed'] = True
+    if resp.status == 404:
+        data['changed'] = False
 
     print json.dumps(data)
     return 0
 
 
-class ToryAddHostModule(AnsibleModule):
+class ToryRemoveHostModule(AnsibleModule):
 
     def _check_invalid_arguments(self):
         pass
