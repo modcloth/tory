@@ -9,6 +9,12 @@ env:
   - DATABASE_URL=postgres://postgres@localhost:5432/travis
 addons:
   postgresql: '9.3'
+  artifacts:
+    key:
+      secure: ce0uEeu7AG2I6CQkreCXjeDzL451IBvnuVyEiOX5811ZZ85KlniOP9X06dQek3jrAkyS5z383Vs10bz8Wzam3WxVC565vs0Wuiuu/NE+KUecdnffD77ekrJr9T8lyGJIGJeSoGCbD31MWQfEzZoMna2/lJ8dq1b+cCD+nqRso9s=
+    secret:
+      secure: Ub6hECj5J9aUv/6nnSutkrz32TnAvFe9DuDX0sitOPrmfEf9A3mF/3xent2PwnkRapUfTtu2QF+/EnI+cr33aO0UQ+hOMV/mHFEOBsJZzLMrmr1X9LB6ful0uk/yQX1Ki71XN6YosC7okqcf+LJjRjAe3Mv/EoO3BH4kDtWwUvg=
+    bucket: modcloth-public-travis-artifacts
 before_install:
 - go get github.com/tools/godep
 - go get code.google.com/p/go.tools/cmd/cover
@@ -21,18 +27,5 @@ before_script:
 after_success:
 - go get github.com/mitchellh/gox
 - make crosstars
-deploy:
-  provider: releases
-  api_key:
-    secure: yYVIN8+dw6cIPCesQsSpyKgEHVQ+xBqluM7ydUIlmV5wyWVLms8d+9Dc+J4PbC9EyzwiTSXdxnYwwJbaiPt9fprnX83d8FE/P+JaXqvffBXdy2UUATuS+KzM9Hp+qo7l0LMJfnadNQ40E/Z3gr8pcU4WOWo33D8ss3XbG3iZbrw=
-  file:
-  - tory-darwin-amd64.tar.bz2
-  - tory-linux-amd64.tar.bz2
-  - tory-windows-amd64.tar.bz2
-  - SHA256SUMS
-  on:
-    repo: modcloth/tory
-    all_branches: true
-    tags: true
 notifications:
   email: github+tory@modcloth.com
