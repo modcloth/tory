@@ -82,15 +82,14 @@ SHA256SUMS: $(CROSS_TARBALLS)
 	$(SHA256SUM) $(CROSS_TARBALLS) > $@
 
 tory-linux-amd64.tar.bz2: crossbuild
-	rsync -av hosts library bin tory-linux-amd64/
+	rsync -av hosts bin tory-linux-amd64/
 	tar -cjvf $@ tory-linux-amd64
 
 tory-darwin-amd64.tar.bz2: crossbuild
-	rsync -av hosts library bin tory-darwin-amd64/
+	rsync -av hosts bin tory-darwin-amd64/
 	tar -cjvf $@ tory-darwin-amd64
 
 tory-windows-amd64.tar.bz2: crossbuild
-	rsync -av library tory-windows-amd64/
 	cp -v bin/tory-sync-from-joyent tory-windows-amd64/bin/tory-sync-from-joyent.py
 	mkdir -p tory-windows-amd64/hosts
 	cp -v hosts/tory tory-windows-amd64/hosts/tory.py
