@@ -18,6 +18,11 @@ def main(sysargs=sys.argv[:]):
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
     parser.add_argument(
+        '--debug',
+        action='store_true',
+        help='log the constructed URL to stderr'
+    )
+    parser.add_argument(
         '--host',
         dest='hostname',
         help='only show the given host'
@@ -57,13 +62,13 @@ def main(sysargs=sys.argv[:]):
         urlparse.urlparse(args.tory_server)
 
     if not query:
-        query = '?HERP=DERP'
+        query = 'HERP=DERP'
 
     if args.hostname:
         path += ('/' + args.hostname)
         query += '&vars-only=1'
 
-    elif not args.list_only:
+    if args.list_only:
         query += '&exclude-vars=1'
 
     if args.team:
@@ -75,6 +80,9 @@ def main(sysargs=sys.argv[:]):
     url = urlparse.urlunparse(
         urlparse.ParseResult(scheme, netloc, path, params, query, fragment)
     )
+
+    if args.debug:
+        print('URL: {}'.format(url), file=sys.stderr)
 
     print(urlopen(url).read())
     return 0
