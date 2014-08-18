@@ -16,6 +16,11 @@ addons:
       secure: Ub6hECj5J9aUv/6nnSutkrz32TnAvFe9DuDX0sitOPrmfEf9A3mF/3xent2PwnkRapUfTtu2QF+/EnI+cr33aO0UQ+hOMV/mHFEOBsJZzLMrmr1X9LB6ful0uk/yQX1Ki71XN6YosC7okqcf+LJjRjAe3Mv/EoO3BH4kDtWwUvg=
     bucket: modcloth-public-travis-artifacts
     permissions: public-read
+    paths:
+    - tory-*-amd64.tar.bz2
+    - SHA256SUMS
+    - coverage.html
+    - ./*.coverprofile
 before_install:
 - go get github.com/tools/godep
 - go get code.google.com/p/go.tools/cmd/cover
