@@ -17,10 +17,10 @@ addons:
     bucket: modcloth-public-travis-artifacts
     permissions: public-read
     paths:
-    - tory-*-amd64.tar.bz2
+    - $(ls -1 tory-*-amd64.tar.bz2 | tr "\n" ":")
+    - $(ls -1 ./*.coverprofile | tr "\n" ":")
     - SHA256SUMS
     - coverage.html
-    - ./*.coverprofile
 before_install:
 - go get github.com/tools/godep
 - go get code.google.com/p/go.tools/cmd/cover
