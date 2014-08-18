@@ -11,7 +11,7 @@ Either build it from source:
 go get github.com/modcloth/tory
 ```
 
-Or download a tarball from github (**TODO**):
+Or download a tarball from github:
 
 https://github.com/modcloth/tory/releases
 
