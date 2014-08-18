@@ -15,30 +15,6 @@ import (
 )
 
 var (
-	defaultMigrations = map[string][]string{
-		"2014-08-01T19:18:12": []string{
-			`CREATE EXTENSION IF NOT EXISTS hstore`,
-			`CREATE SEQUENCE hosts_serial`,
-			`CREATE TABLE IF NOT EXISTS hosts (
-				id integer PRIMARY KEY DEFAULT nextval('hosts_serial'),
-				name varchar(255) UNIQUE NOT NULL,
-				package varchar(255),
-				image varchar(255),
-				type varchar(255),
-				ip inet NOT NULL,
-				tags hstore,
-				vars hstore,
-				modified timestamp DEFAULT current_timestamp
-			)`,
-			`CREATE INDEX hosts_package_idx ON hosts (package)`,
-			`CREATE INDEX hosts_image_idx ON hosts (image)`,
-			`CREATE INDEX hosts_type_idx ON hosts (type)`,
-			`CREATE INDEX hosts_ip_idx ON hosts (ip)`,
-			`CREATE INDEX hosts_tags_idx ON hosts USING GIN (tags)`,
-			`CREATE INDEX hosts_vars_idx ON hosts USING GIN (vars)`,
-		},
-	}
-
 	noHostInDatabaseError = fmt.Errorf("no such host")
 	createHostFailedError = fmt.Errorf("failed to create host")
 	noVarError            = fmt.Errorf("no such var")
@@ -49,8 +25,6 @@ type database struct {
 	conn *sqlx.DB
 	l    *log.Logger
 	Log  *logrus.Logger
-
-	Migrations map[string][]string
 }
 
 type idRow struct {
@@ -61,21 +35,16 @@ type valueRow struct {
 	Value sql.NullString `db:"value"`
 }
 
-func newDatabase(urlString string, migrations map[string][]string) (*database, error) {
+func newDatabase(urlString string) (*database, error) {
 	conn, err := sqlx.Connect("postgres", urlString)
 	if err != nil {
 		return nil, err
 	}
 
 	db := &database{
-		conn:       conn,
-		Migrations: migrations,
-		l:          log.New(os.Stderr, "", log.LstdFlags),
-		Log:        logrus.New(),
-	}
-
-	if db.Migrations == nil {
-		db.Migrations = defaultMigrations
+		conn: conn,
+		l:    log.New(os.Stderr, "", log.LstdFlags),
+		Log:  logrus.New(),
 	}
 
 	return db, nil
@@ -323,7 +292,7 @@ func (db *database) DeleteTag(hostname, key string) error {
 	return db.DeleteVarOrTag("tags", hostname, key)
 }
 
-func (db *database) Setup() error {
-	ensurer := sensurer.New(db.conn.DB, db.Migrations, db.l)
+func (db *database) Setup(migrations map[string][]string) error {
+	ensurer := sensurer.New(db.conn.DB, migrations, db.l)
 	return ensurer.EnsureSchema()
 }

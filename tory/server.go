@@ -75,7 +75,7 @@ type server struct {
 }
 
 func newServer(dbConnStr string) (*server, error) {
-	db, err := newDatabase(dbConnStr, nil)
+	db, err := newDatabase(dbConnStr)
 	if err != nil {
 		return nil, err
 	}
