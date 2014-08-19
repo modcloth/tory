@@ -63,9 +63,11 @@ def main(sysargs=sys.argv[:]):
 def _sync_one_machine(log, server, auth_token, machine):
     host_def = machine.copy()
     host_def.pop('id')
+    host_def.pop('primaryIp')
     host_def.update({
         'ip': machine.pop('primaryIp'),
         'vars': {
+            'joyent_id': str(machine.pop('id')),
             'disk': str(machine.pop('disk')),
             'memory': str(machine.pop('memory')),
         },
