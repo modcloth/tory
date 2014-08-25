@@ -12,6 +12,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/negroni"
 	"github.com/gorilla/mux"
+	"github.com/meatballhat/maybestatic"
 	"github.com/meatballhat/negroni-logrus"
 	"github.com/modcloth/expvarplus"
 )
@@ -120,9 +121,10 @@ func (srv *server) Setup(opts *ServerOptions) {
 
 	srv.r.HandleFunc(`/ping`, srv.handlePing).Methods("GET", "HEAD")
 	srv.r.HandleFunc(`/debug/vars`, expvarplus.HandleExpvars).Methods("GET")
+	srv.r.Handle(`/`, http.RedirectHandler(`/index.html`, http.StatusFound))
 
 	srv.n.Use(negroni.NewRecovery())
-	srv.n.Use(negroni.NewStatic(http.Dir(opts.StaticDir)))
+	srv.n.Use(negroni.NewStatic(maybestatic.New(opts.StaticDir, Asset)))
 	srv.n.Use(negronilogrus.NewMiddleware())
 	srv.n.Use(newAuthMiddleware(opts.AuthToken))
 	srv.n.UseHandler(srv.r)

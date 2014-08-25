@@ -27,6 +27,7 @@ FLAKE8 ?= flake8
 GO ?= go
 GOX ?= gox
 GODEP ?= godep
+GO_BINDATA ?= go-bindata
 PIP ?= pip
 ifeq ($(shell uname),Darwin)
 SHA256SUM ?= gsha256sum
@@ -68,8 +69,14 @@ build: deps .build
 	$(GO) install $(GOBUILD_LDFLAGS) $(PACKAGE) $(SUBPACKAGES)
 
 .PHONY: deps
-deps:
+deps: tory/bindata.go
 	$(GODEP) restore
+
+tory/bindata.go: .go-bindata-bootstrap $(wildcard public/*)
+	$(GO_BINDATA) -prefix=public -o=$@ -pkg=tory ./public
+
+.go-bindata-bootstrap:
+	$(GO) get -x github.com/jteeuwen/go-bindata > $@
 
 .PHONY: crossbuild
 crossbuild: deps .gox-bootstrap
