@@ -4,6 +4,13 @@ version = 1
 tag_opts = ["--force"]
 
 [[container]]
+name = "app"
+Dockerfile = "Dockerfile"
+registry = "quay.io/modcloth"
+project = "tory"
+tags = ["git:branch", "git:rev", "git:short", "latest"]
+
+[[container]]
 name = "cron"
 Dockerfile = "Dockerfile.cron"
 registry = "quay.io/modcloth"
