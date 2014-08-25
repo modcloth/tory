@@ -7,6 +7,7 @@ RUN apt-get update -y && apt-get install -y python
 
 ADD bin/tory-register /usr/local/bin/tory-register
 ADD .docker/docker-entrypoint /docker-entrypoint
+RUN touch /etc/default/tory-register
 
 WORKDIR /root
 CMD ["cron", "-f"]
