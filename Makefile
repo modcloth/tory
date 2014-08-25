@@ -76,7 +76,7 @@ tory/bindata.go: .go-bindata-bootstrap $(wildcard public/*)
 	$(GO_BINDATA) -prefix=public -o=$@ -pkg=tory ./public
 
 .go-bindata-bootstrap:
-	$(GO) get -x github.com/jteeuwen/go-bindata > $@
+	$(GO) get -x github.com/jteeuwen/go-bindata/go-bindata > $@
 
 .PHONY: crossbuild
 crossbuild: deps .gox-bootstrap
@@ -140,6 +140,10 @@ clean:
 	$(RM) $${GOPATH%%:*}/bin/tory *.coverprofile coverage.html
 	$(RM) -r tory-*-amd64*
 	$(GO) clean -x $(PACKAGE) $(SUBPACKAGES)
+
+.PHONY: distclean
+distclean: clean
+	$(RM) .gox-bootstrap .go-bindata-bootstrap .flake8-bootstrap
 
 .PHONY: save
 save:
