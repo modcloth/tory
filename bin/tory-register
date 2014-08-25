@@ -10,6 +10,7 @@ import re
 import socket
 import sys
 
+from itertools import ifilter
 from urlparse import urlparse
 
 HAS_NETIFACES = False
@@ -72,9 +73,9 @@ def main(sysargs=sys.argv[:]):
         '-t', '--tag',
         metavar='TORY_TAGS',
         dest='tags', type=_kvpair, action='append',
-        default=[
+        default=list(ifilter(lambda pair: len(pair) == 2, [
             _kvpair(s) for s in os.environ.get('TORY_TAGS', '').split(':')
-        ],
+        ])),
         help='tags assigned to host (as key=value pairs)',
     )
     parser.add_argument(
