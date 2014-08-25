@@ -2,6 +2,7 @@
 from __future__ import print_function
 
 import argparse
+import datetime
 import os
 import sys
 
@@ -11,6 +12,11 @@ try:
 except ImportError:
     from urllib import urlopen
     import urlparse
+
+
+DEFAULT_SINCE = (
+    datetime.datetime.utcnow() - datetime.timedelta(days=30)
+).isoformat() + 'Z'
 
 
 def main(sysargs=sys.argv[:]):
@@ -56,6 +62,13 @@ def main(sysargs=sys.argv[:]):
         help='filter hosts by the "env" tag',
         default=os.environ.get('NETWORK_ENV')
     )
+    parser.add_argument(
+        '-S',
+        '--since',
+        metavar='TORY_SINCE',
+        help='only return hosts modified since iso8601 timestamp',
+        default=os.environ.get('TORY_SINCE', DEFAULT_SINCE),
+    )
 
     args = parser.parse_args(sysargs[1:])
     scheme, netloc, path, params, query, fragment = \
@@ -76,6 +89,9 @@ def main(sysargs=sys.argv[:]):
 
     if args.env:
         query += '&env={}'.format(args.env)
+
+    if args.since:
+        query += '&since={}'.format(args.since)
 
     url = urlparse.urlunparse(
         urlparse.ParseResult(scheme, netloc, path, params, query, fragment)

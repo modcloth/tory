@@ -147,7 +147,8 @@ func (db *database) UpdateHost(h *host) (*host, error) {
 	stmt, err := tx.PrepareNamed(`
 		UPDATE hosts
 		SET package = :package, image = :image, type = :type, ip = :ip,
-			tags = tags || :tags, vars = vars || :vars
+			tags = tags || :tags, vars = vars || :vars,
+			modified = current_timestamp
 		WHERE name = :name
 		RETURNING id`)
 
@@ -226,7 +227,10 @@ func (db *database) ReadVarOrTag(which, name, key string) (string, error) {
 
 func (db *database) UpdateVarOrTag(which, hostname, key, value string) error {
 	stmt, err := db.conn.Preparex(fmt.Sprintf(`
-		UPDATE hosts SET %s = %s || $2 WHERE name = $1 RETURNING id`,
+		UPDATE hosts
+		SET %s = %s || $2,
+			modified = current_timestamp
+		WHERE name = $1 RETURNING id`,
 		which, which))
 
 	if err != nil {
@@ -252,7 +256,10 @@ func (db *database) UpdateVarOrTag(which, hostname, key, value string) error {
 
 func (db *database) DeleteVarOrTag(which, hostname, key string) error {
 	stmt, err := db.conn.Preparex(fmt.Sprintf(`
-		UPDATE hosts SET %s = delete(%s, $2) WHERE name = $1 RETURNING id`,
+		UPDATE hosts
+		SET %s = delete(%s, $2),
+			modified = current_timestamp
+		WHERE name = $1 RETURNING id`,
 		which, which))
 
 	if err != nil {

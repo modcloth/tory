@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/negroni"
@@ -172,11 +173,23 @@ func (srv *server) handlePing(w http.ResponseWriter, r *http.Request) {
 }
 
 func (srv *server) getHostInventory(w http.ResponseWriter, r *http.Request) {
-	hf := &hostFilter{
-		Name: r.FormValue("name"),
-		Env:  r.FormValue("env"),
-		Team: r.FormValue("team"),
+	var err error
+	sinceTime := zeroTime
+	since := r.FormValue("since")
+	if since != "" {
+		sinceTime, err = time.Parse(time.RFC3339, since)
+		if err != nil {
+			srv.log.WithField("error", err).Warn("failed to parse \"since\" param")
+		}
 	}
+
+	hf := &hostFilter{
+		Name:  r.FormValue("name"),
+		Env:   r.FormValue("env"),
+		Team:  r.FormValue("team"),
+		Since: sinceTime,
+	}
+
 	srv.log.WithFields(logrus.Fields{
 		"filter": hf,
 	}).Debug("reading hosts with vars and filter")

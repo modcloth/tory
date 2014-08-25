@@ -4,21 +4,27 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/lib/pq/hstore"
 )
 
+var (
+	zeroTime time.Time
+)
+
 type hostFilter struct {
-	Name string
-	Env  string
-	Team string
+	Name  string
+	Env   string
+	Team  string
+	Since time.Time
 }
 
 func (hf *hostFilter) BuildWhereClause() (string, []interface{}) {
 	whereParts := []string{}
 	binds := []interface{}{}
 
-	if hf.Name == "" && hf.Env == "" && hf.Team == "" {
+	if hf.Name == "" && hf.Env == "" && hf.Team == "" && hf.Since == zeroTime {
 		return "", binds
 	}
 
@@ -51,6 +57,12 @@ func (hf *hostFilter) BuildWhereClause() (string, []interface{}) {
 		})
 		whereParts = append(whereParts,
 			fmt.Sprintf("lower(tags::text)::hstore @> $%d", len(binds)))
+	}
+
+	if hf.Since != zeroTime {
+		binds = append(binds, hf.Since)
+		whereParts = append(whereParts,
+			fmt.Sprintf("modified > $%d", len(binds)))
 	}
 
 	if len(whereParts) > 0 {
