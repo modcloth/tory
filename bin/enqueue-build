@@ -1,0 +1,11 @@
+#!/bin/bash
+
+
+curl "https://${DOCKER_BUILD_SERVER_AUTH}@docker-build-server.modcloth.com/jobs" \
+  -XPOST -H 'Content-Type: application/json' -d "
+{
+  \"account\": \"modcloth\",
+  \"repo\": \"tory\",
+  \"ref\": \"$TRAVIS_COMMIT\"
+}
+"
