@@ -1,0 +1,13 @@
+FROM ubuntu:14.04
+
+ENV HOME /root
+ENV PATH /usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin
+
+RUN apt-get update -y && apt-get install -y python
+
+ADD bin/tory-register /usr/local/bin/tory-register
+ADD .docker/docker-entrypoint /docker-entrypoint
+
+WORKDIR /root
+CMD ["cron", "-f"]
+ENTRYPOINT ["/docker-entrypoint"]
