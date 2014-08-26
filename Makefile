@@ -41,7 +41,7 @@ GOBUILD_LDFLAGS := -ldflags "\
   -X $(GENERATED_VAR) $(GENERATED_VALUE) \
   -w -s"
 GOBUILD_FLAGS ?= -tags 'netgo'
-GOTEST_FLAGS ?= -race -v
+GOTEST_FLAGS ?= -v
 
 GOX_OSARCH ?= linux/amd64 darwin/amd64 windows/amd64
 GOX_FLAGS ?= -output="tory-{{.OS}}-{{.Arch}}/bin/{{.Dir}}" -osarch="$(GOX_OSARCH)"
@@ -69,7 +69,7 @@ build: deps .build
 
 .PHONY: .build
 .build:
-	$(GO) install $(GOBUILD_FLAGS) $(GOBUILD_LDFLAGS) $(PACKAGE) $(SUBPACKAGES)
+	$(GO) install -a $(GOBUILD_FLAGS) $(GOBUILD_LDFLAGS) $(PACKAGE) $(SUBPACKAGES)
 
 .PHONY: deps
 deps: tory/bindata.go
@@ -123,11 +123,11 @@ all.coverprofile: $(COVERPROFILES)
 	grep -h -v 'mode: count' $^ >> $@
 
 main.coverprofile:
-	$(GO) test $(GOTEST_FLAGS) $(GOBUILD_FLAGS) $(GOBUILD_LDFLAGS) \
+	$(GO) test $(GOTEST_FLAGS) $(GOBUILD_LDFLAGS) \
 	  -coverprofile=$@ -covermode=count $(PACKAGE)
 
 tory.coverprofile:
-	$(GO) test $(GOTEST_FLAGS) $(GOBUILD_FLAGS) $(GOBUILD_LDFLAGS) \
+	$(GO) test $(GOTEST_FLAGS) $(GOBUILD_LDFLAGS) \
 	  -coverprofile=$@ -covermode=count github.com/modcloth/tory/tory
 
 .PHONY: migrate
@@ -136,7 +136,7 @@ migrate: build
 
 .PHONY: test-deps
 test-deps:
-	$(GO) test -i $(GOTEST_FLAGS) $(GOBUILD_FLAGS) $(GOBUILD_LDFLAGS) $(PACKAGE) $(SUBPACKAGES)
+	$(GO) test -i $(GOTEST_FLAGS) $(GOBUILD_LDFLAGS) $(PACKAGE) $(SUBPACKAGES)
 
 .PHONY: clean
 clean:

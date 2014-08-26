@@ -26,12 +26,12 @@ before_install:
 - go get github.com/tools/godep
 - go get code.google.com/p/go.tools/cmd/cover
 - godep restore
-- go install -a -race std
 - mkdir -p $HOME/.local/bin
 - pip install --user flake8
 before_script:
 - createdb -U postgres travis
 after_success:
+- CGO_ENABLED=0 go install -a std
 - go get github.com/mitchellh/gox
 - make crosstars
 notifications:
