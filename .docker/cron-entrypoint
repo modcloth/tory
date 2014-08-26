@@ -1,9 +1,0 @@
-#!/bin/bash
-
-set -e
-
-readonly cmd="set -e ; sleep \`echo \$RANDOM | cut -b1-2\` ; . /etc/default/tory-register ; /usr/local/bin/tory-register"
-readonly schedule="${TORY_SCHEDULE:-"* * * * *"}"
-echo "$schedule $cmd" | crontab -
-
-exec "$@"

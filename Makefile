@@ -17,7 +17,7 @@ BRANCH_VALUE := $(shell git rev-parse --abbrev-ref HEAD)
 GENERATED_VAR := $(PACKAGE)/tory.GeneratedString
 GENERATED_VALUE := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 
-DOCKER_TAG ?= modcloth/tory:latest
+DOCKER_TAG ?= quay.io/modcloth/tory:latest
 
 DATABASE_URL ?= postgres://localhost/tory?sslmode=disable
 PORT ?= 9462

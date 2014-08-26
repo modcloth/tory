@@ -34,5 +34,6 @@ before_script:
 after_success:
 - go get github.com/mitchellh/gox
 - make crosstars
+- bin/enqueue-build
 notifications:
   email: github+tory@modcloth.com
