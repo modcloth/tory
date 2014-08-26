@@ -44,13 +44,20 @@ GOBUILD_FLAGS ?=
 GOTEST_FLAGS ?= -race -v
 
 GOX_OSARCH ?= linux/amd64 darwin/amd64 windows/amd64
-GOX_FLAGS ?= -output="tory-{{.OS}}-{{.Arch}}/bin/{{.Dir}}" -osarch="$(GOX_OSARCH)"
+GOX_FLAGS ?= \
+	-output="tory-{{.OS}}-{{.Arch}}/bin/{{.Dir}}" \
+	-osarch="$(GOX_OSARCH)"
 
 CROSS_TARBALLS := \
 	tory-linux-amd64.tar.bz2 \
 	tory-darwin-amd64.tar.bz2 \
 	tory-windows-amd64.tar.bz2
-PYTEST_FLAGS ?= --cov-report term-missing --cov tory_sync_from_joyent --cov tory_register --pep8 -rs --pdb
+PYTEST_FLAGS ?= \
+	--cov-report term-missing \
+	--cov tory_sync_from_joyent \
+	--cov tory_register \
+	--cov tory_inventory \
+	--pep8 -rs --pdb
 ALLFILES := $(shell git ls-files)
 PYFILES := $(shell grep -l -E '^\#!/usr/bin/env python' $(ALLFILES))
 

@@ -35,9 +35,8 @@ def main(sysargs=sys.argv[:]):
     )
     parser.add_argument(
         '--list',
-        dest='list_only',
         action='store_true',
-        help='only list the hosts, excluding hostvars'
+        help='(compatibility no-op)'
     )
     parser.add_argument(
         '-s',
@@ -81,9 +80,6 @@ def main(sysargs=sys.argv[:]):
         path += ('/' + args.hostname)
         query += '&vars-only=1'
 
-    if args.list_only:
-        query += '&exclude-vars=1'
-
     if args.team:
         query += '&team={}'.format(args.team)
 
@@ -100,8 +96,12 @@ def main(sysargs=sys.argv[:]):
     if args.debug:
         print('URL: {}'.format(url), file=sys.stderr)
 
-    print(urlopen(url).read())
+    print(_fetch_inventory(url))
     return 0
+
+
+def _fetch_inventory(url):
+    return urlopen(url).read()
 
 
 if __name__ == '__main__':
