@@ -29,6 +29,7 @@ GOX ?= gox
 GODEP ?= godep
 GO_BINDATA ?= go-bindata
 PIP ?= pip
+PYTEST ?= py.test
 ifeq ($(shell uname),Darwin)
 SHA256SUM ?= gsha256sum
 else
@@ -59,7 +60,7 @@ export QUIET
 export VERBOSE
 
 .PHONY: all
-all: clean build migrate test save pycheck
+all: clean build migrate test save pycheck pytest
 
 .PHONY: build
 build: deps .build
@@ -137,6 +138,7 @@ test-deps:
 
 .PHONY: clean
 clean:
+	$(RM) -r .coverage .*-bootstrap .cache/ $(shell find . -name '*.pyc')
 	$(RM) $${GOPATH%%:*}/bin/tory *.coverprofile coverage.html
 	$(RM) -r tory-*-amd64*
 	$(GO) clean -x $(PACKAGE) $(SUBPACKAGES)
@@ -154,7 +156,14 @@ pycheck: .flake8-bootstrap
 	$(FLAKE8) $(PYFILES)
 
 .flake8-bootstrap:
-	(flake8 --version || $(PIP) install flake8) && touch $@
+	(flake8 --version || $(PIP) install -r requirements.txt) && touch $@
+
+.PHONY: pytest
+pytest: .pytest-bootstrap
+	$(PYTEST) --cov-report term-missing --cov tory_sync_from_joyent --cov tory_register --pep8 -rs --pdb tests/
+
+.pytest-bootstrap:
+	(py.test --version || $(PIP) install -r requirements.txt) && touch $@
 
 .PHONY: build-container
 build-container:

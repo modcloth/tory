@@ -62,13 +62,15 @@ def main(sysargs=sys.argv[:]):
 
 def _sync_one_machine(log, server, auth_token, machine):
     host_def = machine.copy()
-    for key in ('id', 'primaryIp', 'name'):
+    for key in ('id', 'primaryIp'):
         host_def.pop(key)
 
+    hostname = machine['name']
     host_def.update({
         'ip': machine.pop('primaryIp'),
+        'name': hostname,
         'vars': {
-            'hostname': str(machine.pop('name')),
+            'hostname': hostname,
             'joyent_id': str(machine.pop('id')),
             'disk': str(machine.pop('disk')),
             'memory': str(machine.pop('memory')),
@@ -78,12 +80,12 @@ def _sync_one_machine(log, server, auth_token, machine):
 
     status = _put_host(server, auth_token, host_def)
     if status == 201:
-        log.info('Added host %s', host_def['name'])
+        log.info('Added host %s', hostname)
     elif status == 200:
-        log.info('Updated host %s', host_def['name'])
+        log.info('Updated host %s', hostname)
     else:
         log.warn('Failed to create or update host %s: %s',
-                 host_def['name'], status)
+                 hostname, status)
 
 
 def _stringified_dict(indict):
