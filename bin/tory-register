@@ -128,7 +128,10 @@ def _kvpair(string):
 
 def _get_local_ipv4(ifname=DEFAULT_IFNAME):
     if HAS_NETIFACES:
-        return netifaces.ifaddresses(ifname)[netifaces.AF_INET][0]['addr']
+        try:
+            return netifaces.ifaddresses(ifname)[netifaces.AF_INET][0]['addr']
+        except ValueError:
+            return ''
     return ''
 
 

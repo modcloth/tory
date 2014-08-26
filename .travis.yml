@@ -7,6 +7,7 @@ env:
   global:
   - PATH=$HOME/gopath/bin:$HOME/.local/bin:$PATH
   - DATABASE_URL=postgres://postgres@localhost:5432/travis
+  - PYTEST_FLAGS="--cov-report term-missing --cov tory_sync_from_joyent --cov tory_register --pep8 -rs"
   - secure: QwUX7PAXs8Xe+1r4dHOatDULewQty9dMufBZOTftg5eeeZFm+oFoir8nSnxkijIb/M3I0UUb94rnAQ+rBpk+Z4aGARzQBTHFayXUUhFI2x0BkOOuNgXeoJC1gOx/M29SMgHjbB2t5G/z9WZ+dCZokmF+TAsUVfBxkOw93hcr/9c=
 addons:
   postgresql: '9.3'
@@ -27,7 +28,7 @@ before_install:
 - go get code.google.com/p/go.tools/cmd/cover
 - godep restore
 - mkdir -p $HOME/.local/bin
-- pip install --user flake8
+- pip install --user -r requirements.txt
 before_script:
 - createdb -U postgres travis
 after_success:

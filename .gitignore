@@ -29,10 +29,13 @@ gin-bin
 .env
 
 .flake8-bootstrap
-.gox-bootstrap
 .go-bindata-bootstrap
+.gox-bootstrap
+.pytest-bootstrap
 build/
 tory/bindata.go
+.cache/
+.coverage
 
 tory-*-amd64*
 SHA256SUMS

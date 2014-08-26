@@ -29,6 +29,7 @@ GOX ?= gox
 GODEP ?= godep
 GO_BINDATA ?= go-bindata
 PIP ?= pip
+PYTEST ?= py.test
 ifeq ($(shell uname),Darwin)
 SHA256SUM ?= gsha256sum
 else
@@ -44,12 +45,20 @@ GOBUILD_FLAGS ?= -tags 'netgo'
 GOTEST_FLAGS ?= -v
 
 GOX_OSARCH ?= linux/amd64 darwin/amd64 windows/amd64
-GOX_FLAGS ?= -output="tory-{{.OS}}-{{.Arch}}/bin/{{.Dir}}" -osarch="$(GOX_OSARCH)"
+GOX_FLAGS ?= \
+	-output="tory-{{.OS}}-{{.Arch}}/bin/{{.Dir}}" \
+	-osarch="$(GOX_OSARCH)"
 
 CROSS_TARBALLS := \
 	tory-linux-amd64.tar.bz2 \
 	tory-darwin-amd64.tar.bz2 \
 	tory-windows-amd64.tar.bz2
+PYTEST_FLAGS ?= \
+	--cov-report term-missing \
+	--cov tory_sync_from_joyent \
+	--cov tory_register \
+	--cov tory_inventory \
+	--pep8 -rs --pdb
 ALLFILES := $(shell git ls-files)
 PYFILES := $(shell grep -l -E '^\#!/usr/bin/env python' $(ALLFILES))
 
@@ -62,7 +71,7 @@ export QUIET
 export VERBOSE
 
 .PHONY: all
-all: clean build migrate test save pycheck
+all: clean build migrate test save pycheck pytest
 
 .PHONY: build
 build: deps .build
@@ -140,6 +149,7 @@ test-deps:
 
 .PHONY: clean
 clean:
+	$(RM) -r .coverage .*-bootstrap .cache/ $(shell find . -name '*.pyc')
 	$(RM) $${GOPATH%%:*}/bin/tory *.coverprofile coverage.html
 	$(RM) -r tory-*-amd64*
 	$(GO) clean -x $(PACKAGE) $(SUBPACKAGES)
@@ -157,7 +167,14 @@ pycheck: .flake8-bootstrap
 	$(FLAKE8) $(PYFILES)
 
 .flake8-bootstrap:
-	(flake8 --version || $(PIP) install flake8) && touch $@
+	(flake8 --version || $(PIP) install -r requirements.txt) && touch $@
+
+.PHONY: pytest
+pytest: .pytest-bootstrap
+	$(PYTEST) $(PYTEST_FLAGS) tests/
+
+.pytest-bootstrap:
+	(py.test --version || $(PIP) install -r requirements.txt) && touch $@
 
 .PHONY: build-container
 build-container:
