@@ -28,7 +28,7 @@ before_install:
 - godep restore
 - go install -a -race std
 - mkdir -p $HOME/.local/bin
-- pip install --user flake8
+- pip install --user -r requirements.txt
 before_script:
 - createdb -U postgres travis
 after_success:
