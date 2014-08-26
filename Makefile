@@ -50,6 +50,7 @@ CROSS_TARBALLS := \
 	tory-linux-amd64.tar.bz2 \
 	tory-darwin-amd64.tar.bz2 \
 	tory-windows-amd64.tar.bz2
+PYTEST_FLAGS ?= --cov-report term-missing --cov tory_sync_from_joyent --cov tory_register --pep8 -rs --pdb
 ALLFILES := $(shell git ls-files)
 PYFILES := $(shell grep -l -E '^\#!/usr/bin/env python' $(ALLFILES))
 
@@ -160,7 +161,7 @@ pycheck: .flake8-bootstrap
 
 .PHONY: pytest
 pytest: .pytest-bootstrap
-	$(PYTEST) --cov-report term-missing --cov tory_sync_from_joyent --cov tory_register --pep8 -rs --pdb tests/
+	$(PYTEST) $(PYTEST_FLAGS) tests/
 
 .pytest-bootstrap:
 	(py.test --version || $(PIP) install -r requirements.txt) && touch $@
