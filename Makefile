@@ -38,8 +38,9 @@ GOBUILD_LDFLAGS := -ldflags "\
   -X $(VERSION_VAR) $(VERSION_VALUE) \
   -X $(REV_VAR) $(REV_VALUE) \
   -X $(BRANCH_VAR) $(BRANCH_VALUE) \
-  -X $(GENERATED_VAR) $(GENERATED_VALUE)"
-GOBUILD_FLAGS ?=
+  -X $(GENERATED_VAR) $(GENERATED_VALUE) \
+  -w -s"
+GOBUILD_FLAGS ?= -tags 'netgo'
 GOTEST_FLAGS ?= -race -v
 
 GOX_OSARCH ?= linux/amd64 darwin/amd64 windows/amd64
@@ -52,9 +53,11 @@ CROSS_TARBALLS := \
 ALLFILES := $(shell git ls-files)
 PYFILES := $(shell grep -l -E '^\#!/usr/bin/env python' $(ALLFILES))
 
+CGO_ENABLED ?= 0
 QUIET ?=
 VERBOSE ?=
 
+export CGO_ENABLED
 export QUIET
 export VERBOSE
 
@@ -66,7 +69,7 @@ build: deps .build
 
 .PHONY: .build
 .build:
-	$(GO) install $(GOBUILD_LDFLAGS) $(PACKAGE) $(SUBPACKAGES)
+	$(GO) install $(GOBUILD_FLAGS) $(GOBUILD_LDFLAGS) $(PACKAGE) $(SUBPACKAGES)
 
 .PHONY: deps
 deps: tory/bindata.go
@@ -76,11 +79,11 @@ tory/bindata.go: .go-bindata-bootstrap $(wildcard public/*)
 	$(GO_BINDATA) -prefix=public -o=$@ -pkg=tory ./public
 
 .go-bindata-bootstrap:
-	$(GO) get -x github.com/jteeuwen/go-bindata/go-bindata > $@
+	$(GO) get -x $(GOBUILD_FLAGS) github.com/jteeuwen/go-bindata/go-bindata > $@
 
 .PHONY: crossbuild
 crossbuild: deps .gox-bootstrap
-	$(GOX) $(GOX_FLAGS) $(GOBUILD_FLAGS) $(GOBUILD_LDFLAGS) $(PACKAGE) $(SUBPACKAGES)
+	$(GOX) $(GOX_FLAGS) $(GOBUILD_LDFLAGS) $(PACKAGE) $(SUBPACKAGES)
 
 .PHONY: crosstars
 crosstars: $(CROSS_TARBALLS) SHA256SUMS
@@ -120,11 +123,11 @@ all.coverprofile: $(COVERPROFILES)
 	grep -h -v 'mode: count' $^ >> $@
 
 main.coverprofile:
-	$(GO) test $(GOTEST_FLAGS) $(GOBUILD_LDFLAGS) \
+	$(GO) test $(GOTEST_FLAGS) $(GOBUILD_FLAGS) $(GOBUILD_LDFLAGS) \
 	  -coverprofile=$@ -covermode=count $(PACKAGE)
 
 tory.coverprofile:
-	$(GO) test $(GOTEST_FLAGS) $(GOBUILD_LDFLAGS) \
+	$(GO) test $(GOTEST_FLAGS) $(GOBUILD_FLAGS) $(GOBUILD_LDFLAGS) \
 	  -coverprofile=$@ -covermode=count github.com/modcloth/tory/tory
 
 .PHONY: migrate
@@ -133,7 +136,7 @@ migrate: build
 
 .PHONY: test-deps
 test-deps:
-	$(GO) test -i $(GOTEST_FLAGS) $(GOBUILD_LDFLAGS) $(PACKAGE) $(SUBPACKAGES)
+	$(GO) test -i $(GOTEST_FLAGS) $(GOBUILD_FLAGS) $(GOBUILD_LDFLAGS) $(PACKAGE) $(SUBPACKAGES)
 
 .PHONY: clean
 clean:
