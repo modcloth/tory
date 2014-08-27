@@ -29,6 +29,7 @@ GOX ?= gox
 GODEP ?= godep
 GO_BINDATA ?= go-bindata
 PIP ?= pip
+PYTEST ?= py.test
 ifeq ($(shell uname),Darwin)
 SHA256SUM ?= gsha256sum
 else
@@ -38,35 +39,46 @@ GOBUILD_LDFLAGS := -ldflags "\
   -X $(VERSION_VAR) $(VERSION_VALUE) \
   -X $(REV_VAR) $(REV_VALUE) \
   -X $(BRANCH_VAR) $(BRANCH_VALUE) \
-  -X $(GENERATED_VAR) $(GENERATED_VALUE)"
-GOBUILD_FLAGS ?=
-GOTEST_FLAGS ?= -race -v
+  -X $(GENERATED_VAR) $(GENERATED_VALUE) \
+  -w -s"
+GOBUILD_FLAGS ?= -tags 'netgo'
+GOTEST_FLAGS ?= -v
 
 GOX_OSARCH ?= linux/amd64 darwin/amd64 windows/amd64
-GOX_FLAGS ?= -output="tory-{{.OS}}-{{.Arch}}/bin/{{.Dir}}" -osarch="$(GOX_OSARCH)"
+GOX_FLAGS ?= \
+	-output="tory-{{.OS}}-{{.Arch}}/bin/{{.Dir}}" \
+	-osarch="$(GOX_OSARCH)"
 
 CROSS_TARBALLS := \
 	tory-linux-amd64.tar.bz2 \
 	tory-darwin-amd64.tar.bz2 \
 	tory-windows-amd64.tar.bz2
+PYTEST_FLAGS ?= \
+	--cov-report term-missing \
+	--cov tory_sync_from_joyent \
+	--cov tory_register \
+	--cov tory_inventory \
+	--pep8 -rs --pdb
 ALLFILES := $(shell git ls-files)
 PYFILES := $(shell grep -l -E '^\#!/usr/bin/env python' $(ALLFILES))
 
+CGO_ENABLED ?= 0
 QUIET ?=
 VERBOSE ?=
 
+export CGO_ENABLED
 export QUIET
 export VERBOSE
 
 .PHONY: all
-all: clean build migrate test save pycheck
+all: clean build migrate test save pycheck pytest
 
 .PHONY: build
 build: deps .build
 
 .PHONY: .build
 .build:
-	$(GO) install $(GOBUILD_LDFLAGS) $(PACKAGE) $(SUBPACKAGES)
+	$(GO) install -a $(GOBUILD_FLAGS) $(GOBUILD_LDFLAGS) $(PACKAGE) $(SUBPACKAGES)
 
 .PHONY: deps
 deps: tory/bindata.go
@@ -76,11 +88,11 @@ tory/bindata.go: .go-bindata-bootstrap $(wildcard public/*)
 	$(GO_BINDATA) -prefix=public -o=$@ -pkg=tory ./public
 
 .go-bindata-bootstrap:
-	$(GO) get -x github.com/jteeuwen/go-bindata/go-bindata > $@
+	$(GO) get -x $(GOBUILD_FLAGS) github.com/jteeuwen/go-bindata/go-bindata > $@
 
 .PHONY: crossbuild
 crossbuild: deps .gox-bootstrap
-	$(GOX) $(GOX_FLAGS) $(GOBUILD_FLAGS) $(GOBUILD_LDFLAGS) $(PACKAGE) $(SUBPACKAGES)
+	$(GOX) $(GOX_FLAGS) $(GOBUILD_LDFLAGS) $(PACKAGE) $(SUBPACKAGES)
 
 .PHONY: crosstars
 crosstars: $(CROSS_TARBALLS) SHA256SUMS
@@ -137,6 +149,7 @@ test-deps:
 
 .PHONY: clean
 clean:
+	$(RM) -r .coverage .*-bootstrap .cache/ $(shell find . -name '*.pyc')
 	$(RM) $${GOPATH%%:*}/bin/tory *.coverprofile coverage.html
 	$(RM) -r tory-*-amd64*
 	$(GO) clean -x $(PACKAGE) $(SUBPACKAGES)
@@ -154,7 +167,14 @@ pycheck: .flake8-bootstrap
 	$(FLAKE8) $(PYFILES)
 
 .flake8-bootstrap:
-	(flake8 --version || $(PIP) install flake8) && touch $@
+	(flake8 --version || $(PIP) install -r requirements.txt) && touch $@
+
+.PHONY: pytest
+pytest: .pytest-bootstrap
+	$(PYTEST) $(PYTEST_FLAGS) tests/
+
+.pytest-bootstrap:
+	(py.test --version || $(PIP) install -r requirements.txt) && touch $@
 
 .PHONY: build-container
 build-container:

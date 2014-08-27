@@ -31,7 +31,7 @@ database named "tory", make sure the `DATABASE_URL` environment varable is set:
 
 ``` bash
 # for example:
-export DATABASE_URL='postgres://localhost/tory?sslmode=disable'
+export DATABASE_URL="postgres://$(whoami)@localhost/tory?sslmode=disable"
 ```
 
 First run migrations:
