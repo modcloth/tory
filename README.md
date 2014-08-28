@@ -41,6 +41,24 @@ Or download a tarball from github:
 
 https://github.com/modcloth/tory/releases
 
+## Client tool installation
+
+The client executables may be fetched from pypi like so:
+
+``` bash
+pip install tory-client
+```
+
+The following executables will be installed that correspond to the files within
+this repo:
+
+| Executable              | Repo path                   |
+| ----------------------- | --------------------------- |
+| `tory-register`         | `bin/tory-register`         |
+| `tory-sync-from-joyent` | `bin/tory-sync-from-joyent` |
+| `tory-inventory`        | `hosts/tory`                |
+
+
 ## Usage
 
 All commands and options are available via the built in help system:
