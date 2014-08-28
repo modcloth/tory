@@ -1,0 +1,1 @@
+../bin/tory-sync-from-joyent
