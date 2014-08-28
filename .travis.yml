@@ -38,3 +38,12 @@ after_success:
 - bin/enqueue-build
 notifications:
   email: github+tory@modcloth.com
+deploy:
+  provider: pypi
+  user: modcloth
+  distributions: sdist
+  password:
+    secure: NIXyfZtdEcW/+GpsIk2KsItrX/tqASFqQL1yoR7Pq+h/ybnKIYy8rSTj161CpobdU8xUqn7DUS2AY5G2Owc3SCyYXQAEHpWHTCj3s/GJXGwXbhrk5Fl6ZKNIkP0XnfU7xHzO0gm0K7Lw7GSGvSGZTZMd+jPwlGYBOGn/Dwq55iM=
+  on:
+    tags: true
+    repo: modcloth/tory

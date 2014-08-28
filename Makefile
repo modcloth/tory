@@ -29,7 +29,6 @@ GOX ?= gox
 GODEP ?= godep
 GO_BINDATA ?= go-bindata
 PIP ?= pip
-PYTEST ?= py.test
 ifeq ($(shell uname),Darwin)
 SHA256SUM ?= gsha256sum
 else
@@ -53,12 +52,6 @@ CROSS_TARBALLS := \
 	tory-linux-amd64.tar.bz2 \
 	tory-darwin-amd64.tar.bz2 \
 	tory-windows-amd64.tar.bz2
-PYTEST_FLAGS ?= \
-	--cov-report term-missing \
-	--cov tory_sync_from_joyent \
-	--cov tory_register \
-	--cov tory_inventory \
-	--pep8 -rs --pdb
 ALLFILES := $(shell git ls-files)
 PYFILES := $(shell grep -l -E '^\#!/usr/bin/env python' $(ALLFILES))
 
@@ -171,7 +164,7 @@ pycheck: .flake8-bootstrap
 
 .PHONY: pytest
 pytest: .pytest-bootstrap
-	$(PYTEST) $(PYTEST_FLAGS) tests/
+	$(MAKE) -C client
 
 .pytest-bootstrap:
 	(py.test --version || $(PIP) install -r requirements.txt) && touch $@

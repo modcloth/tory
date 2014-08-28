@@ -1,1 +1,0 @@
-tory-sync-from-joyent
