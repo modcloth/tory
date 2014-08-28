@@ -3,6 +3,32 @@ tory
 
 Ansible inventory server
 
+## Goals
+
+Tory is meant to be used as a reasonably fast dynamic inventory source via the
+[`hosts/tory`](./hosts/tory) inventory script, keeping track of the latest host
+vars and tags.  It's also a handy, queryable snapshot of one's server estate
+and provides server-side filtering options to help minimize the returned
+inventory JSON.
+
+Syncing into tory is a matter of hitting its API with a `PUT` per host.  There
+is currently a syncer written for Joyent available at
+[`bin/tory-sync-from-joyent`](./bin/tory-sync-from-joyent).
+
+In addition to periodic syncs from external sources such as Joyent, tory ships
+a [registration executable](./bin/tory-register) that's meant to be run locally
+at intervals on each host for self-registration.  This, combined with the
+default value for `since` which filters out hosts modified more than 30 days in
+the past, means that a dynamic server estate can slowly change over time
+without requiring explicit host cleanup.
+
+## Non-Goals
+
+Tory does not keep a versioned history of the things that it stores, but
+instead is meant to be a queryable snapshot of what's current.  Holding on to
+versioned bits for rolling back and restoring configuration versions is better
+left to another tool.
+
 ## Installation
 
 Either build it from source:
