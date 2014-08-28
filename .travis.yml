@@ -35,5 +35,6 @@ after_success:
 - CGO_ENABLED=0 go install -a std
 - go get github.com/mitchellh/gox
 - make crosstars
+- bin/enqueue-build
 notifications:
   email: github+tory@modcloth.com

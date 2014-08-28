@@ -9,6 +9,7 @@ import os
 import re
 import socket
 import sys
+import time
 
 from itertools import ifilter
 from urlparse import urlparse
@@ -89,6 +90,12 @@ def main(sysargs=sys.argv[:]):
         metavar='TORY_AUTH_TOKEN',
         help='tory server auth token'
     )
+    parser.add_argument(
+        '-L', '--loop-seconds',
+        type=int, default=int(os.environ.get('TORY_LOOP_SECONDS', '0')),
+        metavar='TORY_LOOP_SECONDS',
+        help='register repeatedly at an interval of seconds if non-zero',
+    )
 
     args = parser.parse_args(sysargs[1:])
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
@@ -110,16 +117,20 @@ def main(sysargs=sys.argv[:]):
             log.error(error)
         return 1
 
-    status = _put_host(args.tory_server, args.auth_token, host_def)
-    if status == 201:
-        log.info('Added host %s', host_def['name'])
-    elif status == 200:
-        log.info('Updated host %s', host_def['name'])
-    else:
-        log.warn('Failed to create or update host %s: %s',
-                 host_def['name'], status)
-
-    return 0
+    while True:
+        status = _put_host(args.tory_server, args.auth_token, host_def)
+        if status == 201:
+            log.info('Added host %s', host_def['name'])
+        elif status == 200:
+            log.info('Updated host %s', host_def['name'])
+        else:
+            log.warn('Failed to create or update host %s: %s',
+                     host_def['name'], status)
+        if args.loop_seconds > 0:
+            log.info('Sleeping %s seconds', args.loop_seconds)
+            time.sleep(args.loop_seconds)
+        else:
+            return 0
 
 
 def _kvpair(string):
