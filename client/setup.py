@@ -12,7 +12,7 @@ def main():
         author_email='platformsphere+pypi@modcloth.com',
         description=desc,
         long_description=desc,
-        version=_get_version(),
+        version='0.4.0',
         classifiers=[
             'Development Status :: 4 - Beta',
             'Environment :: Console',
@@ -40,11 +40,6 @@ def main():
     )
 
     return 0
-
-
-def _get_version():
-    with open('VERSION') as version:
-        return version.read().strip()
 
 
 if __name__ == '__main__':
