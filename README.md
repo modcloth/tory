@@ -84,8 +84,12 @@ which may be altered via the `TORY_PREFIX` environment variable or the
 * `GET /ansible/hosts` - returns the full inventory in ansible-compatible JSON.
 Accepts the following query string variables to filter the results:
     * `name` - only return hosts with names that prefix match this value
-	* `env` - only return hosts with a matching `env` tag
-	* `team` - only return hosts with a matching `team` tag
+    * `env` - only return hosts with a matching `env` tag
+    * `team` - only return hosts with a matching `team` tag
+    * `since` - only return hosts modified since this timestamp (RFC3339
+      format, e.g.: "2006-01-02T15:04:05Z07:00")
+    * `exclude-vars` - do not populate the `_meta` -&gt; `hostvars` object
+    * `vars-only` - only return the `hostvars` as a top-level object
 * `GET /ansible/hosts/{hostname}` - returns a single host in a `host` JSON
 object in the format described below.
 * `PUT /ansible/hosts/{hostname}` - creates or updates a host by name with a

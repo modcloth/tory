@@ -127,6 +127,16 @@ func hostToHostJSON(h *host) *HostJSON {
 func (h *host) CollapsedVars() map[string]string {
 	varsMap := map[string]string{}
 
+	for key, value := range map[string]string{
+		"hostname": strings.ToLower(h.Name),
+		"image":    strings.ToLower(h.Image.String),
+		"ip":       h.IP.Addr,
+		"modified": h.Modified.Format(time.RFC3339),
+		"package":  strings.ToLower(h.Package.String),
+		"type":     strings.ToLower(h.Type.String),
+	} {
+		varsMap[key] = value
+	}
 	for key, value := range h.Tags.Map {
 		varsMap[strings.ToLower(key)] = strings.ToLower(value.String)
 	}

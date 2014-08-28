@@ -76,7 +76,6 @@ def _sync_one_machine(log, server, auth_token, machine):
         'vars': {
             'ansible_python_interpreter': interpreter,
             'disk': str(machine.pop('disk')),
-            'hostname': hostname,
             'joyent_id': str(machine.pop('id')),
             'memory': str(machine.pop('memory')),
         },
