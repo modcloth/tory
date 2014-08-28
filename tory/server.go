@@ -222,6 +222,10 @@ func (srv *server) getHostInventory(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
+		if r.FormValue("exclude-vars") != "" {
+			continue
+		}
+
 		for key, value := range host.CollapsedVars() {
 			inv.Meta.AddHostvar(host.IP.Addr, key, value)
 		}
