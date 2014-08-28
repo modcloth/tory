@@ -207,23 +207,8 @@ func (srv *server) getHostInventory(w http.ResponseWriter, r *http.Request) {
 		inv.AddIPToGroupUnsanitized(host.Name, host.IP.Addr)
 
 		if host.Type.String != "" {
-			switch host.Type.String {
-			case "smartmachine":
-				inv.Meta.AddHostvar(host.IP.Addr,
-					"ansible_python_interpreter", "/opt/local/bin/python")
-			case "virtualmachine":
-				inv.Meta.AddHostvar(host.IP.Addr,
-					"ansible_python_interpreter", "/usr/bin/python")
-			}
-
 			inv.AddIPToGroup(fmt.Sprintf("type_%s",
 				strings.ToLower(host.Type.String)), host.IP.Addr)
-		}
-
-		if r.FormValue("exclude-vars") == "" {
-			for key, value := range host.CollapsedVars() {
-				inv.Meta.AddHostvar(host.IP.Addr, key, value)
-			}
 		}
 
 		if host.Tags != nil && host.Tags.Map != nil {
@@ -235,6 +220,10 @@ func (srv *server) getHostInventory(w http.ResponseWriter, r *http.Request) {
 					strings.ToLower(key), strings.ToLower(value.String))
 				inv.AddIPToGroup(invKey, host.IP.Addr)
 			}
+		}
+
+		for key, value := range host.CollapsedVars() {
+			inv.Meta.AddHostvar(host.IP.Addr, key, value)
 		}
 	}
 
