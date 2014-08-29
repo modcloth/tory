@@ -51,7 +51,11 @@ def main(sysargs=sys.argv[:]):
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
     log = logging.getLogger('tory-sync-from-joyent')
 
-    for machine in json.load(args.sdc_listmachines_json):
+    machines = json.load(args.sdc_listmachines_json)
+    if hasattr(machines, 'keys'):
+        machines = [machines]
+
+    for machine in machines:
         try:
             _sync_one_machine(log, args.tory_server, args.auth_token, machine)
         except Exception:
