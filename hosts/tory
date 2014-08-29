@@ -9,8 +9,9 @@ import sys
 try:
     from urllib.request import urlopen
     import urllib.parse as urlparse
+    from urllib.parse import urlencode
 except ImportError:
-    from urllib import urlopen
+    from urllib import urlopen, urlencode
     import urlparse
 
 
@@ -35,8 +36,10 @@ def main(sysargs=sys.argv[:]):
     )
     parser.add_argument(
         '--list',
+        dest='enable_error_silencing',
         action='store_true',
-        help='(compatibility no-op)'
+        help='compatibility flag for dynamic inventory, ' +
+             'enables silent error handling'
     )
     parser.add_argument(
         '-s',
@@ -73,31 +76,46 @@ def main(sysargs=sys.argv[:]):
     scheme, netloc, path, params, query, fragment = \
         urlparse.urlparse(args.tory_server)
 
-    if not query:
-        query = 'HERP=DERP'
+    query_dict = urlparse.parse_qs(query)
 
     if args.hostname:
         path += ('/' + args.hostname)
-        query += '&vars-only=1'
+        query_dict['vars-only'] = '1'
 
     if args.team:
-        query += '&team={}'.format(args.team)
+        query_dict['team'] = args.team
 
     if args.env:
-        query += '&env={}'.format(args.env)
+        query_dict['env'] = args.env
 
     if args.since:
-        query += '&since={}'.format(args.since)
+        query_dict['since'] = args.since
 
     url = urlparse.urlunparse(
-        urlparse.ParseResult(scheme, netloc, path, params, query, fragment)
+        urlparse.ParseResult(
+            scheme, netloc, path, params, urlencode(query_dict), fragment
+        )
     )
 
     if args.debug:
         print('URL: {}'.format(url), file=sys.stderr)
 
-    print(_fetch_inventory(url))
-    return 0
+    try:
+        print(_fetch_inventory(url))
+        return 0
+    except IOError as exc:
+        if not args.debug and args.enable_error_silencing:
+            print('ERROR: Could not connect to tory server: {}'.format(exc),
+                  file=sys.stderr)
+            print('{}')
+            return 0
+        raise
+    except Exception as exc:
+        if not args.debug and args.enable_error_silencing:
+            print('ERROR: {}'.format(exc), file=sys.stderr)
+            print('{}')
+            return 0
+        raise
 
 
 def _fetch_inventory(url):
