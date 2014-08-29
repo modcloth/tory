@@ -52,7 +52,7 @@ def main(sysargs=sys.argv[:]):
     log = logging.getLogger('tory-sync-from-joyent')
 
     machines = json.load(args.sdc_listmachines_json)
-    if type(machines).__name__ == "dict":
+    if hasattr(machines, 'keys'):
         machines = [machines]
 
     for machine in machines:
