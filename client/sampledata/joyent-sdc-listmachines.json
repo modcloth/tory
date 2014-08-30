@@ -17,7 +17,6 @@
     "state": "running",
     "memory": 4096,
     "disk": 122880,
-    "primaryIp": "192.168.112.79",
     "id": "ef51ea99-4509-426d-b649-755790462a5b",
     "metadata": {}
   },
@@ -43,7 +42,6 @@
     "state": "running",
     "memory": 1024,
     "disk": 30720,
-    "primaryIp": "192.168.112.16",
     "id": "63b71d4f-d986-4978-88dc-a90eb4758fae",
     "metadata": {}
   },
@@ -65,7 +63,6 @@
     "state": "running",
     "memory": 2048,
     "disk": 61440,
-    "primaryIp": "192.168.113.111",
     "id": "1a24e7a0-d4fa-4727-be8b-7ae09e48d072",
     "metadata": {
       "root_authorized_keys": "ssh-rsa AAAA...== foo@wat"
