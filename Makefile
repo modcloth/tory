@@ -74,6 +74,7 @@ build: deps .build
 .PHONY: .build
 .build:
 	$(GO) install -a $(GOBUILD_FLAGS) $(GOBUILD_LDFLAGS) $(PACKAGE) $(SUBPACKAGES)
+	ln -svF $(PWD)/bin/tory-* $(GOPATH)/bin
 
 .PHONY: deps
 deps: tory/bindata.go
