@@ -28,6 +28,7 @@ GO ?= go
 GOX ?= gox
 GODEP ?= godep
 GO_BINDATA ?= go-bindata
+GOPATH := $(shell echo "$${GOPATH%%:*}")
 PIP ?= pip
 ifeq ($(shell uname),Darwin)
 SHA256SUM ?= gsha256sum
@@ -62,6 +63,7 @@ VERBOSE ?=
 export CGO_ENABLED
 export QUIET
 export VERBOSE
+export GOPATH
 
 .PHONY: all
 all: clean build migrate test save pycheck pytest
@@ -134,7 +136,7 @@ tory.coverprofile:
 
 .PHONY: migrate
 migrate: build
-	$${GOPATH%%:*}/bin/tory migrate -d $(DATABASE_URL)
+	$(GOPATH)/bin/tory migrate -d $(DATABASE_URL)
 
 .PHONY: test-deps
 test-deps:
@@ -143,7 +145,7 @@ test-deps:
 .PHONY: clean
 clean:
 	$(RM) -r .coverage .*-bootstrap .cache/ $(shell find . -name '*.pyc')
-	$(RM) $${GOPATH%%:*}/bin/tory *.coverprofile coverage.html
+	$(RM) $(GOPATH)/bin/tory *.coverprofile coverage.html
 	$(RM) -r tory-*-amd64*
 	$(GO) clean -x $(PACKAGE) $(SUBPACKAGES)
 
