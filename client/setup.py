@@ -12,7 +12,7 @@ def main():
         author_email='platformsphere+pypi@modcloth.com',
         description=desc,
         long_description=desc,
-        version='0.4.0',
+        version='0.4.1',
         classifiers=[
             'Development Status :: 4 - Beta',
             'Environment :: Console',

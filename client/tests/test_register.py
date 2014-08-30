@@ -29,3 +29,16 @@ def setup():
 def test_main():
     ret = tory_register.main(['tory-register'])
     assert ret == 0
+
+
+def test_once_overrides_loop_seconds_env_var():
+    os.environ['TORY_LOOP_SECONDS'] = '3600'
+    ret = tory_register.main(['tory-register', '--once'])
+    assert ret == 0
+
+
+def test_once_overrides_loop_seconds_flag():
+    ret = tory_register.main([
+        'tory-register', '--once', '--loop-seconds=3600'
+    ])
+    assert ret == 0

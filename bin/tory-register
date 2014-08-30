@@ -96,6 +96,12 @@ def main(sysargs=sys.argv[:]):
         metavar='TORY_LOOP_SECONDS',
         help='register repeatedly at an interval of seconds if non-zero',
     )
+    parser.add_argument(
+        '--once',
+        action='store_true',
+        default=os.environ.get('TORY_ONCE') is not None,
+        help='only run registration once (equivalent to --loop-seconds=0)'
+    )
 
     args = parser.parse_args(sysargs[1:])
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
@@ -126,11 +132,11 @@ def main(sysargs=sys.argv[:]):
         else:
             log.warn('Failed to create or update host %s: %s',
                      host_def['name'], status)
-        if args.loop_seconds > 0:
-            log.info('Sleeping %s seconds', args.loop_seconds)
-            time.sleep(args.loop_seconds)
-        else:
+        if args.once or args.loop_seconds == 0:
             return 0
+
+        log.info('Sleeping %s seconds', args.loop_seconds)
+        time.sleep(args.loop_seconds)
 
 
 def _kvpair(string):

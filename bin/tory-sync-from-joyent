@@ -75,7 +75,7 @@ def _sync_one_machine(log, server, auth_token, machine):
 
     hostname = machine['name']
     host_def.update({
-        'ip': machine.pop('ips').pop(),
+        'ip': machine.pop('ips')[0],
         'name': hostname,
         'vars': {
             'ansible_python_interpreter': interpreter,
