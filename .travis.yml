@@ -7,7 +7,6 @@ env:
   global:
   - PATH=$HOME/gopath/bin:$HOME/.local/bin:$PATH
   - DATABASE_URL=postgres://postgres@localhost:5432/travis
-  - PYTEST_FLAGS="--cov-report term-missing --cov tory_sync_from_joyent --cov tory_register --pep8 -rs"
   - secure: QwUX7PAXs8Xe+1r4dHOatDULewQty9dMufBZOTftg5eeeZFm+oFoir8nSnxkijIb/M3I0UUb94rnAQ+rBpk+Z4aGARzQBTHFayXUUhFI2x0BkOOuNgXeoJC1gOx/M29SMgHjbB2t5G/z9WZ+dCZokmF+TAsUVfBxkOw93hcr/9c=
 addons:
   postgresql: '9.3'
@@ -38,12 +37,3 @@ after_success:
 - bin/enqueue-build
 notifications:
   email: github+tory@modcloth.com
-deploy:
-  provider: pypi
-  user: modcloth
-  distributions: sdist
-  password:
-    secure: NIXyfZtdEcW/+GpsIk2KsItrX/tqASFqQL1yoR7Pq+h/ybnKIYy8rSTj161CpobdU8xUqn7DUS2AY5G2Owc3SCyYXQAEHpWHTCj3s/GJXGwXbhrk5Fl6ZKNIkP0XnfU7xHzO0gm0K7Lw7GSGvSGZTZMd+jPwlGYBOGn/Dwq55iM=
-  on:
-    tags: true
-    repo: modcloth/tory
