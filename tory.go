@@ -1,14 +1,28 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"os"
+	"os/exec"
+	"strings"
 
 	"github.com/codegangsta/cli"
 	"github.com/modcloth/tory/tory"
 )
 
 func main() {
+	whoami := os.Getenv("USER")
+	if os.Getenv("DATABASE_URL") == "" && whoami == "" {
+		cmd := exec.Command("whoami")
+		var out bytes.Buffer
+		cmd.Stdout = &out
+		err := cmd.Run()
+		if err == nil {
+			whoami = strings.TrimSpace(out.String())
+		}
+	}
+
 	app := cli.NewApp()
 	app.Name = "tory"
 	app.Usage = "ansible inventory server"
@@ -43,7 +57,7 @@ func main() {
 				},
 				cli.StringFlag{
 					Name:   "d, database-url",
-					Value:  "postgres://localhost/tory?sslmode=disable",
+					Value:  fmt.Sprintf("postgres://%s@localhost/tory?sslmode=disable", whoami),
 					Usage:  "database connection uri",
 					EnvVar: "DATABASE_URL",
 				},
@@ -82,7 +96,7 @@ func main() {
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:   "d, database-url",
-					Value:  "postgres://localhost/tory?sslmode=disable",
+					Value:  fmt.Sprintf("postgres://%s@localhost/tory?sslmode=disable", whoami),
 					Usage:  "database connection uri",
 					EnvVar: "DATABASE_URL",
 				},

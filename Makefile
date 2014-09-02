@@ -19,7 +19,7 @@ GENERATED_VALUE := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 
 DOCKER_TAG ?= quay.io/modcloth/tory:latest
 
-DATABASE_URL ?= postgres://localhost/tory?sslmode=disable
+DATABASE_URL ?= postgres://$(shell whoami)@localhost/tory?sslmode=disable
 PORT ?= 9462
 
 DOCKER ?= docker
@@ -64,6 +64,7 @@ export CGO_ENABLED
 export QUIET
 export VERBOSE
 export GOPATH
+export DATABASE_URL
 
 .PHONY: all
 all: clean build migrate test save pycheck pytest
@@ -74,7 +75,7 @@ build: deps .build
 .PHONY: .build
 .build:
 	$(GO) install -a $(GOBUILD_FLAGS) $(GOBUILD_LDFLAGS) $(PACKAGE) $(SUBPACKAGES)
-	ln -svF $(PWD)/bin/tory-* $(GOPATH)/bin
+	ln -svf $(PWD)/bin/tory-* $(GOPATH)/bin
 
 .PHONY: deps
 deps: tory/bindata.go
