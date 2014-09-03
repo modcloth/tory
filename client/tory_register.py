@@ -1,1 +1,0 @@
-../bin/tory-register
