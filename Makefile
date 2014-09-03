@@ -23,13 +23,11 @@ DATABASE_URL ?= postgres://localhost/tory?sslmode=disable
 PORT ?= 9462
 
 DOCKER ?= docker
-FLAKE8 ?= flake8
 GO ?= go
 GOX ?= gox
 GODEP ?= godep
 GO_BINDATA ?= go-bindata
 GOPATH := $(shell echo "$${GOPATH%%:*}")
-PIP ?= pip
 ifeq ($(shell uname),Darwin)
 SHA256SUM ?= gsha256sum
 else
@@ -54,7 +52,6 @@ CROSS_TARBALLS := \
 	tory-darwin-amd64.tar.bz2 \
 	tory-windows-amd64.tar.bz2
 ALLFILES := $(shell git ls-files)
-PYFILES := $(shell grep -l -E '^\#!/usr/bin/env python' $(ALLFILES))
 
 CGO_ENABLED ?= 0
 QUIET ?=
@@ -66,7 +63,7 @@ export VERBOSE
 export GOPATH
 
 .PHONY: all
-all: clean build migrate test save pycheck pytest
+all: clean build migrate test save
 
 .PHONY: build
 build: deps .build
@@ -74,7 +71,6 @@ build: deps .build
 .PHONY: .build
 .build:
 	$(GO) install -a $(GOBUILD_FLAGS) $(GOBUILD_LDFLAGS) $(PACKAGE) $(SUBPACKAGES)
-	ln -svF $(PWD)/bin/tory-* $(GOPATH)/bin
 
 .PHONY: deps
 deps: tory/bindata.go
@@ -97,17 +93,12 @@ SHA256SUMS: $(CROSS_TARBALLS)
 	$(SHA256SUM) $(CROSS_TARBALLS) > $@
 
 tory-linux-amd64.tar.bz2: crossbuild
-	rsync -av hosts bin tory-linux-amd64/
 	tar -cjvf $@ tory-linux-amd64
 
 tory-darwin-amd64.tar.bz2: crossbuild
-	rsync -av hosts bin tory-darwin-amd64/
 	tar -cjvf $@ tory-darwin-amd64
 
 tory-windows-amd64.tar.bz2: crossbuild
-	cp -v bin/tory-sync-from-joyent tory-windows-amd64/bin/tory-sync-from-joyent.py
-	mkdir -p tory-windows-amd64/hosts
-	cp -v hosts/tory tory-windows-amd64/hosts/tory.py
 	tar -cjvf $@ tory-windows-amd64
 
 .gox-bootstrap:
@@ -152,25 +143,11 @@ clean:
 
 .PHONY: distclean
 distclean: clean
-	$(RM) .gox-bootstrap .go-bindata-bootstrap .flake8-bootstrap
+	$(RM) .gox-bootstrap .go-bindata-bootstrap
 
 .PHONY: save
 save:
 	$(GODEP) save -copy=false $(PACKAGE) $(SUBPACKAGES)
-
-.PHONY: pycheck
-pycheck: .flake8-bootstrap
-	$(FLAKE8) $(PYFILES)
-
-.flake8-bootstrap:
-	(flake8 --version || $(PIP) install -r requirements.txt) && touch $@
-
-.PHONY: pytest
-pytest: .pytest-bootstrap
-	$(MAKE) -C client
-
-.pytest-bootstrap:
-	(py.test --version || $(PIP) install -r requirements.txt) && touch $@
 
 .PHONY: build-container
 build-container:
