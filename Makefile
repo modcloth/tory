@@ -28,7 +28,6 @@ GOX ?= gox
 GODEP ?= godep
 GO_BINDATA ?= go-bindata
 GOPATH := $(shell echo "$${GOPATH%%:*}")
-PIP ?= pip
 ifeq ($(shell uname),Darwin)
 SHA256SUM ?= gsha256sum
 else

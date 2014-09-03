@@ -27,7 +27,6 @@ before_install:
 - go get code.google.com/p/go.tools/cmd/cover
 - godep restore
 - mkdir -p $HOME/.local/bin
-- pip install --user -r requirements.txt
 before_script:
 - createdb -U postgres travis
 after_success:
