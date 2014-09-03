@@ -12,15 +12,16 @@ and provides server-side filtering options to help minimize the returned
 inventory JSON.
 
 Syncing into tory is a matter of hitting its API with a `PUT` per host.  There
-is currently a syncer written for Joyent available at
-[`bin/tory-sync-from-joyent`](./bin/tory-sync-from-joyent).
+is currently a syncer written for Joyent available in the
+[tory-client](https://github.com/modcloth/tory-client) package mentioned below.
 
-In addition to periodic syncs from external sources such as Joyent, tory ships
-a [registration executable](./bin/tory-register) that's meant to be run locally
-at intervals on each host for self-registration.  This, combined with the
-default value for `since` which filters out hosts modified more than 30 days in
-the past, means that a dynamic server estate can slowly change over time
-without requiring explicit host cleanup.
+In addition to periodic syncs from external sources such as Joyent, there is a
+registration executable in
+[tory-client](https://github.com/modcloth/tory-client) that's meant to be run
+locally at intervals on each host for self-registration.  This, combined with
+the default value for `since` which filters out hosts modified more than 30
+days in the past, means that a dynamic server estate can slowly change over
+time without requiring explicit host cleanup.
 
 ## Non-Goals
 
@@ -43,21 +44,12 @@ https://github.com/modcloth/tory/releases
 
 ## Client tool installation
 
-The client executables may be fetched from pypi like so:
+The [client executables](https://github.com/modcloth/tory-client) may be
+fetched from pypi like so:
 
 ``` bash
 pip install tory-client
 ```
-
-The following executables will be installed that correspond to the files within
-this repo:
-
-| Executable              | Repo path                   |
-| ----------------------- | --------------------------- |
-| `tory-register`         | `bin/tory-register`         |
-| `tory-sync-from-joyent` | `bin/tory-sync-from-joyent` |
-| `tory-inventory`        | `hosts/tory`                |
-
 
 ## Usage
 
