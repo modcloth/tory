@@ -1,0 +1,12 @@
+---
+language: go
+go:
+- 1.0
+- 1.1
+- tip
+install:
+  - go get -v code.google.com/p/gosqlite/sqlite3
+notifications:
+  email:
+    recipients:
+    - github+schema_ensurer@modcloth.com
