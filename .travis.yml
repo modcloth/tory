@@ -23,9 +23,9 @@ addons:
     - SHA256SUMS
     - coverage.html
 before_install:
-- go get github.com/tools/godep
+- go get github.com/meatballhat/goderp
 - go get code.google.com/p/go.tools/cmd/cover
-- godep restore
+- goderp restore
 - mkdir -p $HOME/.local/bin
 before_script:
 - createdb -U postgres travis

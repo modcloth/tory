@@ -25,7 +25,7 @@ PORT ?= 9462
 DOCKER ?= docker
 GO ?= go
 GOX ?= gox
-GODEP ?= godep
+GODERP ?= goderp
 GO_BINDATA ?= go-bindata
 GOPATH := $(shell echo "$${GOPATH%%:*}")
 ifeq ($(shell uname),Darwin)
@@ -71,11 +71,10 @@ build: deps .build
 
 .PHONY: .build
 .build:
-	$(GO) install -a $(GOBUILD_FLAGS) $(GOBUILD_LDFLAGS) $(PACKAGE) $(SUBPACKAGES)
+	$(GODERP) $(GO) install -a $(GOBUILD_FLAGS) $(GOBUILD_LDFLAGS) $(PACKAGE) $(SUBPACKAGES)
 
 .PHONY: deps
 deps: tory/bindata.go
-	$(GODEP) restore
 
 tory/bindata.go: .go-bindata-bootstrap $(wildcard public/*)
 	$(GO_BINDATA) -prefix=public -o=$@ -pkg=tory ./public
@@ -112,19 +111,19 @@ test: build test-deps .test
 .test: coverage.html
 
 coverage.html: all.coverprofile
-	$(GO) tool cover -func=$<
-	$(GO) tool cover -html=$< -o $@
+	$(GODERP) $(GO) tool cover -func=$<
+	$(GODERP) $(GO) tool cover -html=$< -o $@
 
 all.coverprofile: $(COVERPROFILES)
 	echo 'mode: count' > $@
 	grep -h -v 'mode: count' $^ >> $@
 
 main.coverprofile:
-	$(GO) test $(GOTEST_FLAGS) $(GOBUILD_LDFLAGS) \
+	$(GODERP) $(GO) test $(GOTEST_FLAGS) $(GOBUILD_LDFLAGS) \
 	  -coverprofile=$@ -covermode=count $(PACKAGE)
 
 tory.coverprofile:
-	$(GO) test $(GOTEST_FLAGS) $(GOBUILD_LDFLAGS) \
+	$(GODERP) $(GO) test $(GOTEST_FLAGS) $(GOBUILD_LDFLAGS) \
 	  -coverprofile=$@ -covermode=count github.com/modcloth/tory/tory
 
 .PHONY: migrate
@@ -133,14 +132,14 @@ migrate: build
 
 .PHONY: test-deps
 test-deps:
-	$(GO) test -i $(GOTEST_FLAGS) $(GOBUILD_LDFLAGS) $(PACKAGE) $(SUBPACKAGES)
+	$(GODERP) $(GO) test -i $(GOTEST_FLAGS) $(GOBUILD_LDFLAGS) $(PACKAGE) $(SUBPACKAGES)
 
 .PHONY: clean
 clean:
 	$(RM) -r .coverage .*-bootstrap .cache/ $(shell find . -name '*.pyc')
 	$(RM) $(GOPATH)/bin/tory *.coverprofile coverage.html
 	$(RM) -r tory-*-amd64*
-	$(GO) clean -x $(PACKAGE) $(SUBPACKAGES)
+	$(GODERP) $(GO) clean -x $(PACKAGE) $(SUBPACKAGES)
 
 .PHONY: distclean
 distclean: clean
@@ -148,7 +147,7 @@ distclean: clean
 
 .PHONY: save
 save:
-	$(GODEP) save -copy=false $(PACKAGE) $(SUBPACKAGES)
+	$(GODERP) save $(PACKAGE) $(SUBPACKAGES)
 
 .PHONY: build-container
 build-container:
