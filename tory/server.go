@@ -32,7 +32,7 @@ func init() {
 		os.Setenv("TORY_ADDR", ":"+port)
 	}
 
-	expvarplus.EnvWhitelist = []string{
+	expvarplus.AddToEnvWhitelist(
 		"DATABASE_URL",
 		"PORT",
 		"QUIET",
@@ -44,7 +44,7 @@ func init() {
 		"TORY_STATIC_DIR",
 		"TORY_VERSION",
 		"VERBOSE",
-	}
+	)
 }
 
 // ServerMain is the whole shebang
