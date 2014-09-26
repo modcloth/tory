@@ -3,7 +3,6 @@ package tory
 import (
 	"database/sql"
 	"fmt"
-	"reflect"
 	"strings"
 	"time"
 
@@ -26,7 +25,8 @@ func (hf *hostFilter) BuildWhereClause() (string, []interface{}) {
 	whereParts := []string{}
 	binds := []interface{}{}
 
-	if reflect.DeepEqual(hf, &hostFilter{}) {
+	// And now, for some dyslexic lisp
+	if ((*hf) == hostFilter{}) {
 		return "", binds
 	}
 
