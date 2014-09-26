@@ -1,6 +1,6 @@
 {
 	"ImportPath": "github.com/modcloth/tory",
-	"GoVersion": "go1.3",
+	"GoVersion": "go1.3.2",
 	"Packages": [
 		"github.com/modcloth/tory",
 		"github.com/modcloth/tory/tory"
@@ -8,13 +8,13 @@
 	"Deps": [
 		{
 			"ImportPath": "github.com/Sirupsen/logrus",
-			"Comment": "v0.5.1-18-g89b6d46",
-			"Rev": "89b6d460f0048bd1591d723b483f89b127257dbb"
+			"Comment": "v0.5.1-29-g3737b32",
+			"Rev": "3737b3267e9df4c78170cf695eb35a984330cd6f"
 		},
 		{
 			"ImportPath": "github.com/codegangsta/cli",
-			"Comment": "1.2.0-22-g687db20",
-			"Rev": "687db20fc379d1686465a28e9959707cd1acc990"
+			"Comment": "1.2.0-26-gf7ebb76",
+			"Rev": "f7ebb761e83e21225d1d8954fde853bf8edd46c4"
 		},
 		{
 			"ImportPath": "github.com/codegangsta/negroni",
@@ -36,7 +36,7 @@
 		},
 		{
 			"ImportPath": "github.com/lib/pq",
-			"Rev": "fbed41b4c063a307ab21bf37ae6705519fb34ca3"
+			"Rev": "e31e9d09fa0cd168dd1a45ddb1dff76f1f55512a"
 		},
 		{
 			"ImportPath": "github.com/meatballhat/maybestatic",
