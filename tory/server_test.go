@@ -136,16 +136,20 @@ func TestHandleDebugVars(t *testing.T) {
 }
 
 func TestHandleGetHostInventory(t *testing.T) {
+	h := mustCreateHost(t)
+
 	for _, s := range []string{
 		`/ansible/hosts/test`,
 		`/ansible/hosts/test?since=2000-01-01T01:00:00Z`,
 		`/ansible/hosts/test?before=3000-01-01T01:00:00Z`,
-		`/ansible/hosts/test?since=2014-09-25T12:00:00Z&before=2014-09-24T12:00:00Z`,
+		fmt.Sprintf(`/ansible/hosts/test?since=%s&before=%s`,
+			time.Now().Add(-1*time.Hour).Format(time.RFC3339),
+			time.Now().Add(1*time.Hour).Format(time.RFC3339)),
 		`/ansible/hosts/test?vars-only=`,
 	} {
 		w := makeRequest("GET", s, nil, "")
 		if w.Code != 200 {
-			t.Fatalf("response code is not 200: %v", w.Code)
+			t.Fatalf("GET %s did not return 200: %v", s, w.Code)
 		}
 
 		inv := newInventory()
@@ -155,11 +159,20 @@ func TestHandleGetHostInventory(t *testing.T) {
 		}
 
 		if inv.Meta == nil {
-			t.Fatalf("body does not contain \"_meta\"")
+			t.Fatalf("GET %s: body does not contain \"_meta\"", s)
 		}
 
 		if inv.Meta.Hostvars == nil {
-			t.Fatalf("body meta does not contain \"hostvars\"")
+			t.Fatalf("GET %s: body meta does not contain \"hostvars\"", s)
+		}
+
+		if _, ok := inv.Meta.Hostvars[h.IP]; !ok {
+			t.Fatalf("GET %s: body meta does not contain \"hostvars\" by IP", s)
+		}
+
+		fmt.Printf("host vars %+v\n", inv.Meta.Hostvars[h.Name])
+		if _, ok := inv.Meta.Hostvars[h.Name]; !ok {
+			t.Fatalf("GET %s: body meta does not contain \"hostvars\" by name", s)
 		}
 	}
 }

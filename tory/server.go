@@ -238,6 +238,7 @@ func (srv *server) getHostInventory(w http.ResponseWriter, r *http.Request) {
 
 		for key, value := range host.CollapsedVars() {
 			inv.Meta.AddHostvar(host.IP.Addr, key, value)
+			inv.Meta.AddHostvar(host.Name, key, value)
 		}
 	}
 
