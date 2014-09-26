@@ -185,11 +185,21 @@ func (srv *server) getHostInventory(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	beforeTime := zeroTime
+	before := r.FormValue("before")
+	if before != "" {
+		beforeTime, err = time.Parse(time.RFC3339, before)
+		if err != nil {
+			srv.log.WithField("error", err).Warn("failed to parse \"before\" param")
+		}
+	}
+
 	hf := &hostFilter{
-		Name:  r.FormValue("name"),
-		Env:   r.FormValue("env"),
-		Team:  r.FormValue("team"),
-		Since: sinceTime,
+		Name:   r.FormValue("name"),
+		Env:    r.FormValue("env"),
+		Team:   r.FormValue("team"),
+		Since:  sinceTime,
+		Before: beforeTime,
 	}
 
 	srv.log.WithFields(logrus.Fields{

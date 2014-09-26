@@ -98,6 +98,8 @@ Accepts the following query string variables to filter the results:
     * `team` - only return hosts with a matching `team` tag
     * `since` - only return hosts modified since this timestamp (RFC3339
       format, e.g.: "2006-01-02T15:04:05Z07:00")
+    * `before` - only return hosts modified before this timestamp (RFC3339
+      format, e.g.: "2006-01-02T15:04:05Z07:00")
     * `exclude-vars` - do not populate the `_meta` -&gt; `hostvars` object
     * `vars-only` - only return the `hostvars` as a top-level object
 * `GET /ansible/hosts/{hostname}` - returns a single host in a `host` JSON

@@ -14,17 +14,19 @@ var (
 )
 
 type hostFilter struct {
-	Name  string
-	Env   string
-	Team  string
-	Since time.Time
+	Name   string
+	Env    string
+	Team   string
+	Since  time.Time
+	Before time.Time
 }
 
 func (hf *hostFilter) BuildWhereClause() (string, []interface{}) {
 	whereParts := []string{}
 	binds := []interface{}{}
 
-	if hf.Name == "" && hf.Env == "" && hf.Team == "" && hf.Since == zeroTime {
+	// And now, for some dyslexic lisp
+	if ((*hf) == hostFilter{}) {
 		return "", binds
 	}
 
@@ -63,6 +65,12 @@ func (hf *hostFilter) BuildWhereClause() (string, []interface{}) {
 		binds = append(binds, hf.Since)
 		whereParts = append(whereParts,
 			fmt.Sprintf("modified > $%d", len(binds)))
+	}
+
+	if hf.Before != zeroTime {
+		binds = append(binds, hf.Before)
+		whereParts = append(whereParts,
+			fmt.Sprintf("modified < $%d", len(binds)))
 	}
 
 	if len(whereParts) > 0 {
