@@ -79,12 +79,16 @@ func getReaderForHost(testHost *HostJSON) io.Reader {
 }
 
 func makeRequest(method, urlStr string, body io.Reader, auth string) *httptest.ResponseRecorder {
+	return makeRequestWithHeaders(method, urlStr, body, http.Header{"Authorization": []string{fmt.Sprintf("token %s", auth)}})
+}
+
+func makeRequestWithHeaders(method, urlStr string, body io.Reader, headers http.Header) *httptest.ResponseRecorder {
 	req, err := http.NewRequest(method, urlStr, body)
 	if err != nil {
 		panic(err)
 	}
 
-	req.Header.Set("Authorization", fmt.Sprintf("token %s", auth))
+	req.Header = headers
 
 	w := httptest.NewRecorder()
 	testServer.n.ServeHTTP(w, req)
@@ -101,6 +105,14 @@ func mustCreateHost(t *testing.T) *HostJSON {
 	}
 
 	return h
+}
+
+func TestHandleGZIPEncoding(t *testing.T) {
+	w := makeRequestWithHeaders("GET", `/ping`, nil, http.Header{"Accept-Encoding": []string{"gzip"}})
+
+	if w.Header().Get("Content-Encoding") != "gzip" {
+		t.Fatalf("response was not gzip encoded")
+	}
 }
 
 func TestHandlePing(t *testing.T) {
