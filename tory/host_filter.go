@@ -3,6 +3,7 @@ package tory
 import (
 	"database/sql"
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 
@@ -25,7 +26,7 @@ func (hf *hostFilter) BuildWhereClause() (string, []interface{}) {
 	whereParts := []string{}
 	binds := []interface{}{}
 
-	if hf.Name == "" && hf.Env == "" && hf.Team == "" && hf.Since == zeroTime && hf.Before == zeroTime {
+	if reflect.DeepEqual(hf, &hostFilter{}) {
 		return "", binds
 	}
 
