@@ -40,7 +40,7 @@ GOBUILD_LDFLAGS := -ldflags "\
   -X $(GENERATED_VAR) $(GENERATED_VALUE) \
   -w -s"
 GOBUILD_FLAGS ?= -tags 'netgo'
-GOTEST_FLAGS ?= -v
+GOTEST_FLAGS ?=
 
 GOX_OSARCH ?= linux/amd64 darwin/amd64 windows/amd64
 GOX_FLAGS ?= \
