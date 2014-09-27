@@ -54,6 +54,10 @@
 		{
 			"ImportPath": "github.com/modcloth/expvarplus",
 			"Rev": "5e58a183508e285b25171258699c577972692457"
+		},
+		{
+			"ImportPath": "github.com/phyber/negroni-gzip/gzip",
+			"Rev": "994bc078b270707c9434e7386e93294a8cd2aeed"
 		}
 	]
 }

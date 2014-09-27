@@ -15,6 +15,7 @@ import (
 	"github.com/meatballhat/maybestatic"
 	"github.com/meatballhat/negroni-logrus"
 	"github.com/modcloth/expvarplus"
+	"github.com/phyber/negroni-gzip/gzip"
 )
 
 var (
@@ -124,6 +125,7 @@ func (srv *server) Setup(opts *ServerOptions) {
 	srv.r.Handle(`/`, http.RedirectHandler(`/index.html`, http.StatusFound))
 
 	srv.n.Use(negroni.NewRecovery())
+	srv.n.Use(gzip.Gzip(gzip.DefaultCompression))
 	srv.n.Use(negroni.NewStatic(maybestatic.New(opts.StaticDir, Asset)))
 	srv.n.Use(negronilogrus.NewMiddleware())
 	srv.n.Use(newAuthMiddleware(opts.AuthToken))
@@ -159,7 +161,6 @@ func (srv *server) sendJSON(w http.ResponseWriter, j interface{}, status int) {
 	jsonString := string(jsonBytes) + "\n"
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.Header().Set("Content-Length", fmt.Sprintf("%d", len(jsonString)))
 	w.WriteHeader(status)
 	fmt.Fprintf(w, jsonString)
 }
