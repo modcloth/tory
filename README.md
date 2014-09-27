@@ -6,8 +6,9 @@ Ansible inventory server
 ## Goals
 
 Tory is meant to be used as a reasonably fast dynamic inventory source via the
-[`hosts/tory`](./hosts/tory) inventory script, keeping track of the latest host
-vars and tags.  It's also a handy, queryable snapshot of one's server estate
+`tory-inventory` inventory script that ships with
+[tory-client](https://github.com/modcloth/tory-client), keeping track of the latest
+host vars and tags.  It's also a handy, queryable snapshot of one's server estate
 and provides server-side filtering options to help minimize the returned
 inventory JSON.
 
