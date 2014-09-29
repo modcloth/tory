@@ -49,7 +49,7 @@ The [client executables](https://github.com/modcloth/tory-client) may be
 fetched from pypi like so:
 
 ``` bash
-pip install tory-client
+pip install tory_client
 ```
 
 ## Usage
