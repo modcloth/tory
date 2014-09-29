@@ -25,7 +25,7 @@ PORT ?= 9462
 DOCKER ?= docker
 GO ?= go
 GOX ?= gox
-GODERP ?= goderp
+DEPPY ?= deppy
 GO_BINDATA ?= go-bindata
 GOPATH := $(shell echo "$${GOPATH%%:*}")
 ifeq ($(shell uname),Darwin)
@@ -71,7 +71,7 @@ build: deps .build
 
 .PHONY: .build
 .build:
-	$(GODERP) $(GO) install -a $(GOBUILD_FLAGS) $(GOBUILD_LDFLAGS) $(PACKAGE) $(SUBPACKAGES)
+	$(DEPPY) $(GO) install -a $(GOBUILD_FLAGS) $(GOBUILD_LDFLAGS) $(PACKAGE) $(SUBPACKAGES)
 
 .PHONY: deps
 deps: tory/bindata.go
@@ -111,19 +111,19 @@ test: build test-deps .test
 .test: coverage.html
 
 coverage.html: all.coverprofile
-	$(GODERP) $(GO) tool cover -func=$<
-	$(GODERP) $(GO) tool cover -html=$< -o $@
+	$(DEPPY) $(GO) tool cover -func=$<
+	$(DEPPY) $(GO) tool cover -html=$< -o $@
 
 all.coverprofile: $(COVERPROFILES)
 	echo 'mode: count' > $@
 	grep -h -v 'mode: count' $^ >> $@
 
 main.coverprofile:
-	$(GODERP) $(GO) test $(GOTEST_FLAGS) $(GOBUILD_LDFLAGS) \
+	$(DEPPY) $(GO) test $(GOTEST_FLAGS) $(GOBUILD_LDFLAGS) \
 	  -coverprofile=$@ -covermode=count $(PACKAGE)
 
 tory.coverprofile:
-	$(GODERP) $(GO) test $(GOTEST_FLAGS) $(GOBUILD_LDFLAGS) \
+	$(DEPPY) $(GO) test $(GOTEST_FLAGS) $(GOBUILD_LDFLAGS) \
 	  -coverprofile=$@ -covermode=count github.com/modcloth/tory/tory
 
 .PHONY: migrate
@@ -132,14 +132,14 @@ migrate: build
 
 .PHONY: test-deps
 test-deps:
-	$(GODERP) $(GO) test -i $(GOTEST_FLAGS) $(GOBUILD_LDFLAGS) $(PACKAGE) $(SUBPACKAGES)
+	$(DEPPY) $(GO) test -i $(GOTEST_FLAGS) $(GOBUILD_LDFLAGS) $(PACKAGE) $(SUBPACKAGES)
 
 .PHONY: clean
 clean:
 	$(RM) -r .coverage .*-bootstrap .cache/ $(shell find . -name '*.pyc')
 	$(RM) $(GOPATH)/bin/tory *.coverprofile coverage.html
 	$(RM) -r tory-*-amd64*
-	$(GODERP) $(GO) clean -x $(PACKAGE) $(SUBPACKAGES)
+	$(DEPPY) $(GO) clean -x $(PACKAGE) $(SUBPACKAGES)
 
 .PHONY: distclean
 distclean: clean
@@ -147,7 +147,7 @@ distclean: clean
 
 .PHONY: save
 save:
-	$(GODERP) save $(PACKAGE) $(SUBPACKAGES)
+	$(DEPPY) save $(PACKAGE) $(SUBPACKAGES)
 
 .PHONY: build-container
 build-container:

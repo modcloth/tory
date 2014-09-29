@@ -13,8 +13,8 @@
 		},
 		{
 			"ImportPath": "github.com/codegangsta/cli",
-			"Comment": "1.2.0-26-gf7ebb76",
-			"Rev": "f7ebb761e83e21225d1d8954fde853bf8edd46c4"
+			"Comment": "1.2.0-22-g687db20",
+			"Rev": "687db20fc379d1686465a28e9959707cd1acc990"
 		},
 		{
 			"ImportPath": "github.com/codegangsta/negroni",
@@ -27,16 +27,16 @@
 		},
 		{
 			"ImportPath": "github.com/gorilla/mux",
-			"Rev": "4b8fbc56f3b2400a7c7ea3dba9b3539787c486b6"
+			"Rev": "e444e69cbd2e2e3e0749a2f3c717cec491552bbf"
 		},
 		{
 			"ImportPath": "github.com/jmoiron/sqlx",
-			"Comment": "sqlx-v1.0-43-gad32362",
-			"Rev": "ad3236229f4566e89cf8eaf154658fab3bbef621"
+			"Comment": "sqlx-v1.0-45-gaa6f196",
+			"Rev": "aa6f196bd82f2024e5f0b5d5e6cf3b21414be8b4"
 		},
 		{
 			"ImportPath": "github.com/lib/pq",
-			"Rev": "e31e9d09fa0cd168dd1a45ddb1dff76f1f55512a"
+			"Rev": "b1d1c3e32b52c49f3e29622b3d88755f6c2c5cd7"
 		},
 		{
 			"ImportPath": "github.com/meatballhat/maybestatic",
