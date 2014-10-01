@@ -146,10 +146,20 @@ func (db *database) UpdateHost(h *host) (*host, error) {
 		return nil, err
 	}
 
+	curHost, err := db.ReadHost(h.Name)
+	if err != nil {
+		defer tx.Rollback()
+		return nil, err
+	}
+
 	stmt, err := tx.PrepareNamed(`
 		UPDATE hosts
-		SET package = :package, image = :image, type = :type, ip = :ip,
-			tags = tags || :tags, vars = vars || :vars,
+		SET package = :package,
+			image = :image,
+			type = :type,
+			ip = :ip,
+			tags = tags || :tags,
+			vars = vars || :vars,
 			modified = current_timestamp
 		WHERE name = :name
 		RETURNING id`)
@@ -157,6 +167,18 @@ func (db *database) UpdateHost(h *host) (*host, error) {
 	if err != nil {
 		defer tx.Rollback()
 		return nil, err
+	}
+
+	if h.Package.String == "" {
+		h.Package = curHost.Package
+	}
+
+	if h.Image.String == "" {
+		h.Image = curHost.Image
+	}
+
+	if h.Type.String == "" {
+		h.Type = curHost.Type
 	}
 
 	err = stmt.Get(h, h)
@@ -167,7 +189,7 @@ func (db *database) UpdateHost(h *host) (*host, error) {
 			// this is not considered an error because the server update is
 			// doing a bit of tell-don't-ask in order to fall back to host
 			// creation
-			db.Log.WithFields(errFields).Warn("failed to update host")
+			db.Log.WithFields(errFields).Info("failed to update host")
 			return nil, noHostInDatabaseError
 		} else {
 			db.Log.WithFields(errFields).Warn("failed to scan struct")
