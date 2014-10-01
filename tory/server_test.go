@@ -337,6 +337,37 @@ func TestHandleUpdateHost(t *testing.T) {
 	if hj.IP != newIP {
 		t.Fatalf("ip address was not updated: %s != %s", hj.IP, newIP)
 	}
+
+	origPackage := h.Package
+	origType := h.Type
+	origImage := h.Image
+
+	h.Package = ""
+	h.Type = ""
+	h.Image = ""
+	reader = getReaderForHost(h)
+
+	w = makeRequest("PUT", `/ansible/hosts/test/`+h.Name, reader, testAuth)
+	if w.Code != 200 {
+		t.Fatalf("response code is not 200: %v", w.Code)
+	}
+
+	hj, err = hostJSONFromHTTPBody(w.Body)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if hj.Package == "" || hj.Package != origPackage {
+		t.Fatalf("package was overwritten by empty string: %q != %q", hj.Package, origPackage)
+	}
+
+	if hj.Type == "" || hj.Type != origType {
+		t.Fatalf("type was overwritten by empty string: %q != %q", hj.Type, origType)
+	}
+
+	if hj.Image == "" || hj.Image != origImage {
+		t.Fatalf("image was overwritten by empty string: %q != %q", hj.Package, origImage)
+	}
 }
 
 func TestHandleUpdateHostUnauthorized(t *testing.T) {
