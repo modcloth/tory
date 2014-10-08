@@ -178,11 +178,6 @@ func TestHandleGetHostInventory(t *testing.T) {
 			t.Fatalf("GET %s: body meta does not contain \"hostvars\"", s)
 		}
 
-		if _, ok := inv.Meta.Hostvars[h.IP]; !ok {
-			t.Fatalf("GET %s: body meta does not contain \"hostvars\" by IP", s)
-		}
-
-		fmt.Printf("host vars %+v\n", inv.Meta.Hostvars[h.Name])
 		if _, ok := inv.Meta.Hostvars[h.Name]; !ok {
 			t.Fatalf("GET %s: body meta does not contain \"hostvars\" by name", s)
 		}
@@ -541,18 +536,18 @@ func TestHandleFilterHosts(t *testing.T) {
 		t.Error(err)
 	}
 
-	hostGroup, ok := res[h.Name]
+	ipGroup, ok := res[h.IP.Addr]
 	if !ok {
-		t.Fatalf("host group not present")
+		t.Fatalf("ip group not present")
 	}
 
-	hostGroupSlice := []string{}
-	err = json.Unmarshal(hostGroup, &hostGroupSlice)
+	ipGroupSlice := []string{}
+	err = json.Unmarshal(hostGroup, &ipGroupSlice)
 	if err != nil {
 		t.Error(err)
 	}
 
-	if len(hostGroupSlice) == 0 {
-		t.Fatalf("host group is empty")
+	if len(ipGroupSlice) == 0 {
+		t.Fatalf("ip group is empty")
 	}
 }
