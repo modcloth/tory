@@ -36,20 +36,20 @@ func (inv *inventory) GetGroup(group string) []string {
 	return nil
 }
 
-func (inv *inventory) AddIPToGroup(group, ip string) {
+func (inv *inventory) AddHostnameToGroup(group, hostname string) {
 	sanitizedGroup := groupNameUnsafe.ReplaceAllString(strings.ToLower(group), "_")
 	sanitizedGroup = strings.Replace(sanitizedGroup, ".", "_", -1)
-	inv.AddIPToGroupUnsanitized(sanitizedGroup, ip)
+	inv.AddHostnameToGroupUnsanitized(sanitizedGroup, hostname)
 }
 
-func (inv *inventory) AddIPToGroupUnsanitized(group, ip string) {
+func (inv *inventory) AddHostnameToGroupUnsanitized(group, hostname string) {
 	inv.groupMutex.Lock()
 	defer inv.groupMutex.Unlock()
 
 	if _, ok := inv.groups[group]; !ok {
 		inv.groups[group] = []string{}
 	}
-	inv.groups[group] = append(inv.groups[group], ip)
+	inv.groups[group] = append(inv.groups[group], hostname)
 }
 
 func (inv *inventory) MarshalJSON() ([]byte, error) {
@@ -81,8 +81,8 @@ func (inv *inventory) UnmarshalJSON(b []byte) error {
 			group := []string{}
 			err := json.Unmarshal(value, &group)
 			if err == nil {
-				for _, ip := range group {
-					inv.AddIPToGroupUnsanitized(key, ip)
+				for _, hostname := range group {
+					inv.AddHostnameToGroupUnsanitized(key, hostname)
 				}
 			}
 		}

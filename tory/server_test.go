@@ -152,11 +152,11 @@ func TestHandleGetHostInventory(t *testing.T) {
 
 	for _, s := range []string{
 		`/ansible/hosts/test`,
-		`/ansible/hosts/test?since=2000-01-01T01:00:00Z`,
-		`/ansible/hosts/test?before=3000-01-01T01:00:00Z`,
+		fmt.Sprintf(`/ansible/hosts/test?since=%s`, time.Now().Add(-24*time.Hour).Format(time.RFC3339)),
+		fmt.Sprintf(`/ansible/hosts/test?before=%s`, time.Now().Add(24*time.Hour).Format(time.RFC3339)),
 		fmt.Sprintf(`/ansible/hosts/test?since=%s&before=%s`,
-			time.Now().Add(-1*time.Hour).Format(time.RFC3339),
-			time.Now().Add(1*time.Hour).Format(time.RFC3339)),
+			time.Now().Add(-24*time.Hour).Format(time.RFC3339),
+			time.Now().Add(24*time.Hour).Format(time.RFC3339)),
 		`/ansible/hosts/test?vars-only=`,
 	} {
 		w := makeRequest("GET", s, nil, "")
@@ -178,11 +178,6 @@ func TestHandleGetHostInventory(t *testing.T) {
 			t.Fatalf("GET %s: body meta does not contain \"hostvars\"", s)
 		}
 
-		if _, ok := inv.Meta.Hostvars[h.IP]; !ok {
-			t.Fatalf("GET %s: body meta does not contain \"hostvars\" by IP", s)
-		}
-
-		fmt.Printf("host vars %+v\n", inv.Meta.Hostvars[h.Name])
 		if _, ok := inv.Meta.Hostvars[h.Name]; !ok {
 			t.Fatalf("GET %s: body meta does not contain \"hostvars\" by name", s)
 		}
@@ -288,8 +283,8 @@ func TestHandleUpdateHost(t *testing.T) {
 	inv := newInventory()
 	err = json.NewDecoder(w.Body).Decode(inv)
 
-	if g := inv.GetGroup(h.Name); g == nil {
-		t.Fatalf("response does not contain host name as group")
+	if g := inv.GetGroup(h.IP); g == nil {
+		t.Fatalf("response does not contain IP as group")
 	}
 
 	tagTeamGroup := inv.GetGroup(fmt.Sprintf("tag_team_fribbles"))
@@ -297,15 +292,15 @@ func TestHandleUpdateHost(t *testing.T) {
 		t.Fatalf("response does not contain tag team group")
 	}
 
-	hasIP := false
-	for _, ip := range tagTeamGroup {
-		if ip == h.IP {
-			hasIP = true
+	hasHostname := false
+	for _, hostname := range tagTeamGroup {
+		if hostname == h.Name {
+			hasHostname = true
 		}
 	}
 
-	if !hasIP {
-		t.Fatalf("test host ip %q not in tag team group", h.IP)
+	if !hasHostname {
+		t.Fatalf("test host %q not in tag team group", h.Name)
 	}
 
 	typeGroup := inv.GetGroup(fmt.Sprintf("type_virtualmachine"))
@@ -313,15 +308,15 @@ func TestHandleUpdateHost(t *testing.T) {
 		t.Fatalf("response does not contain type group")
 	}
 
-	hasIP = false
-	for _, ip := range typeGroup {
-		if ip == h.IP {
-			hasIP = true
+	hasHostname = false
+	for _, hostname := range typeGroup {
+		if hostname == h.Name {
+			hasHostname = true
 		}
 	}
 
-	if !hasIP {
-		t.Fatalf("test host ip %q not in tag team group", h.IP)
+	if !hasHostname {
+		t.Fatalf("test host %q not in tag team group", h.Name)
 	}
 
 	w = makeRequest("GET", `/ansible/hosts/test/`+h.Name, nil, "")
@@ -541,18 +536,18 @@ func TestHandleFilterHosts(t *testing.T) {
 		t.Error(err)
 	}
 
-	hostGroup, ok := res[h.Name]
+	ipGroup, ok := res[h.IP]
 	if !ok {
-		t.Fatalf("host group not present")
+		t.Fatalf("ip group not present")
 	}
 
-	hostGroupSlice := []string{}
-	err = json.Unmarshal(hostGroup, &hostGroupSlice)
+	ipGroupSlice := []string{}
+	err = json.Unmarshal(ipGroup, &ipGroupSlice)
 	if err != nil {
 		t.Error(err)
 	}
 
-	if len(hostGroupSlice) == 0 {
-		t.Fatalf("host group is empty")
+	if len(ipGroupSlice) == 0 {
+		t.Fatalf("ip group is empty")
 	}
 }

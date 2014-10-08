@@ -215,11 +215,11 @@ func (srv *server) getHostInventory(w http.ResponseWriter, r *http.Request) {
 
 	inv := newInventory()
 	for _, host := range hosts {
-		inv.AddIPToGroupUnsanitized(host.Name, host.IP.Addr)
+		inv.AddHostnameToGroupUnsanitized(host.IP.Addr, host.Name)
 
 		if host.Type.String != "" {
-			inv.AddIPToGroup(fmt.Sprintf("type_%s",
-				strings.ToLower(host.Type.String)), host.IP.Addr)
+			inv.AddHostnameToGroup(fmt.Sprintf("type_%s",
+				strings.ToLower(host.Type.String)), host.Name)
 		}
 
 		if host.Tags != nil && host.Tags.Map != nil {
@@ -229,7 +229,7 @@ func (srv *server) getHostInventory(w http.ResponseWriter, r *http.Request) {
 				}
 				invKey := fmt.Sprintf("tag_%s_%s",
 					strings.ToLower(key), strings.ToLower(value.String))
-				inv.AddIPToGroup(invKey, host.IP.Addr)
+				inv.AddHostnameToGroup(invKey, host.Name)
 			}
 		}
 
@@ -238,7 +238,6 @@ func (srv *server) getHostInventory(w http.ResponseWriter, r *http.Request) {
 		}
 
 		for key, value := range host.CollapsedVars() {
-			inv.Meta.AddHostvar(host.IP.Addr, key, value)
 			inv.Meta.AddHostvar(host.Name, key, value)
 		}
 	}
