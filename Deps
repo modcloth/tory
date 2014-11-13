@@ -8,18 +8,18 @@
 	"Deps": [
 		{
 			"ImportPath": "github.com/Sirupsen/logrus",
-			"Comment": "v0.5.1-29-g3737b32",
-			"Rev": "3737b3267e9df4c78170cf695eb35a984330cd6f"
+			"Comment": "v0.6.0-5-gf92b795",
+			"Rev": "f92b7950b372b1db80bd3527e4d40e42555fe6c2"
 		},
 		{
 			"ImportPath": "github.com/codegangsta/cli",
-			"Comment": "1.2.0-22-g687db20",
-			"Rev": "687db20fc379d1686465a28e9959707cd1acc990"
+			"Comment": "1.2.0-28-g61f43e7",
+			"Rev": "61f43e76957561f52674f48b7dc9a07f53c8f398"
 		},
 		{
 			"ImportPath": "github.com/codegangsta/negroni",
-			"Comment": "v0.1-30-g85fb09c",
-			"Rev": "85fb09cb1e4889ec4038ebd6f8d88fb8d3e86b3f"
+			"Comment": "v0.1-34-gae96f1c",
+			"Rev": "ae96f1c1ac9eb11be7dff4fe4cb42f6846b93d77"
 		},
 		{
 			"ImportPath": "github.com/gorilla/context",
@@ -31,12 +31,12 @@
 		},
 		{
 			"ImportPath": "github.com/jmoiron/sqlx",
-			"Comment": "sqlx-v1.0-45-gaa6f196",
-			"Rev": "aa6f196bd82f2024e5f0b5d5e6cf3b21414be8b4"
+			"Comment": "sqlx-v1.0-52-g7172c4f",
+			"Rev": "7172c4f697fe8b4743fc8e9410fa161fc4623628"
 		},
 		{
 			"ImportPath": "github.com/lib/pq",
-			"Rev": "b1d1c3e32b52c49f3e29622b3d88755f6c2c5cd7"
+			"Rev": "7175accbed18058468c07811f76440d6e8d7cf19"
 		},
 		{
 			"ImportPath": "github.com/meatballhat/maybestatic",
@@ -53,11 +53,11 @@
 		},
 		{
 			"ImportPath": "github.com/modcloth/expvarplus",
-			"Rev": "5e58a183508e285b25171258699c577972692457"
+			"Rev": "bd74cc65cda7c733b812fc41e1121f5e5baafde2"
 		},
 		{
 			"ImportPath": "github.com/phyber/negroni-gzip/gzip",
-			"Rev": "994bc078b270707c9434e7386e93294a8cd2aeed"
+			"Rev": "0b2752a07f05079c716e4409134b1f4c385f63ea"
 		}
 	]
 }
