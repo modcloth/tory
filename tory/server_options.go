@@ -9,4 +9,13 @@ type ServerOptions struct {
 	Quiet       bool
 	StaticDir   string
 	Verbose     bool
+
+	NewRelicOptions NewRelicOptions
+}
+
+type NewRelicOptions struct {
+	Enabled    bool
+	LicenseKey string
+	AppName    string
+	Verbose    bool
 }

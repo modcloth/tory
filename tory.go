@@ -73,6 +73,27 @@ func main() {
 					Usage:  "public api prefix",
 					EnvVar: "TORY_PREFIX",
 				},
+				cli.BoolFlag{
+					Name:   "E, new-relic-agent-enabled",
+					Usage:  "Enable the NewRelic agent",
+					EnvVar: "NEW_RELIC_AGENT_ENABLED",
+				},
+				cli.StringFlag{
+					Name:   "l, new-relic-license-key",
+					Usage:  "New Relic License Key",
+					EnvVar: "NEW_RELIC_LICENSE_KEY",
+				},
+				cli.StringFlag{
+					Name:   "n, new-relic-app-name",
+					Value:  "Tory",
+					Usage:  "New Relic App Name",
+					EnvVar: "NEW_RELIC_APP_NAME",
+				},
+				cli.BoolFlag{
+					Name:   "V, new-relic-verbose",
+					Usage:  "Set New Relic agent to report verbosely",
+					EnvVar: "NEW_RELIC_VERBOSE",
+				},
 			},
 			Action: func(c *cli.Context) {
 				tory.ServerMain(&tory.ServerOptions{
@@ -83,6 +104,12 @@ func main() {
 					Quiet:       c.Bool("quiet"),
 					StaticDir:   c.String("static-dir"),
 					Verbose:     c.Bool("verbose"),
+					NewRelicOptions: tory.NewRelicOptions{
+						Enabled:    c.Bool("new-relic-agent-enabled"),
+						LicenseKey: c.String("new-relic-license-key"),
+						AppName:    c.String("new-relic-app-name"),
+						Verbose:    c.Bool("new-relic-verbose"),
+					},
 				})
 			},
 		},

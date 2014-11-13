@@ -12,6 +12,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/negroni"
 	"github.com/gorilla/mux"
+	"github.com/jingweno/negroni-gorelic"
 	"github.com/meatballhat/maybestatic"
 	"github.com/meatballhat/negroni-logrus"
 	"github.com/modcloth/expvarplus"
@@ -125,6 +126,14 @@ func (srv *server) Setup(opts *ServerOptions) {
 	srv.r.Handle(`/`, http.RedirectHandler(`/index.html`, http.StatusFound))
 
 	srv.n.Use(negroni.NewRecovery())
+
+	if opts.NewRelicOptions.Enabled {
+		srv.n.Use(negronigorelic.New(
+			opts.NewRelicOptions.LicenseKey,
+			opts.NewRelicOptions.AppName,
+			opts.NewRelicOptions.Verbose))
+	}
+
 	srv.n.Use(gzip.Gzip(gzip.DefaultCompression))
 	srv.n.Use(negroni.NewStatic(maybestatic.New(opts.StaticDir, Asset)))
 	srv.n.Use(negronilogrus.NewMiddleware())
