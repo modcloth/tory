@@ -138,7 +138,6 @@ func (srv *server) Setup(opts *ServerOptions) {
 	srv.n.Use(negroni.NewStatic(maybestatic.New(opts.StaticDir, Asset)))
 	srv.n.Use(negronilogrus.NewMiddleware())
 	srv.n.Use(newAuthMiddleware(opts.AuthToken))
-	srv.n.Use(newAuthMiddleware(opts.AuthToken))
 	srv.n.UseHandler(srv.r)
 }
 
