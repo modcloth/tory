@@ -30,6 +30,10 @@
 			"Rev": "e444e69cbd2e2e3e0749a2f3c717cec491552bbf"
 		},
 		{
+			"ImportPath": "github.com/jingweno/negroni-gorelic",
+			"Rev": "0547cdd62f4b911984d435279bd46b4d1a580823"
+		},
+		{
 			"ImportPath": "github.com/jmoiron/sqlx",
 			"Comment": "sqlx-v1.0-52-g7172c4f",
 			"Rev": "7172c4f697fe8b4743fc8e9410fa161fc4623628"
@@ -58,6 +62,19 @@
 		{
 			"ImportPath": "github.com/phyber/negroni-gzip/gzip",
 			"Rev": "0b2752a07f05079c716e4409134b1f4c385f63ea"
+		},
+		{
+			"ImportPath": "github.com/yvasiyarov/go-metrics",
+			"Rev": "57bccd1ccd43f94bb17fdd8bf3007059b802f85e"
+		},
+		{
+			"ImportPath": "github.com/yvasiyarov/gorelic",
+			"Comment": "v0.0.6-6-ged461c0",
+			"Rev": "ed461c0552ffe5e4bee53eb23c0edacc13c82555"
+		},
+		{
+			"ImportPath": "github.com/yvasiyarov/newrelic_platform_go",
+			"Rev": "b21fdbd4370f3717f3bbd2bf41c223bc273068e6"
 		}
 	]
 }
