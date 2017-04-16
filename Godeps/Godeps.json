@@ -1,0 +1,59 @@
+{
+	"ImportPath": "github.com/modcloth/tory",
+	"GoVersion": "go1.3",
+	"Packages": [
+		"github.com/modcloth/tory",
+		"github.com/modcloth/tory/tory"
+	],
+	"Deps": [
+		{
+			"ImportPath": "github.com/Sirupsen/logrus",
+			"Comment": "v0.5.0",
+			"Rev": "d1c2d610bd8d921fcffc4791c204eafa634e2956"
+		},
+		{
+			"ImportPath": "github.com/codegangsta/cli",
+			"Comment": "1.2.0-16-gaa19913",
+			"Rev": "aa19913be3107ab75ea67a5a88d667d62a69dbbd"
+		},
+		{
+			"ImportPath": "github.com/codegangsta/negroni",
+			"Comment": "v0.1-27-g46bd821",
+			"Rev": "46bd821940d86fb9777f7f86e9ae428132e110da"
+		},
+		{
+			"ImportPath": "github.com/gorilla/context",
+			"Rev": "14f550f51af52180c2eefed15e5fd18d63c0a64a"
+		},
+		{
+			"ImportPath": "github.com/gorilla/mux",
+			"Rev": "14cafe28513321476c73967a5a4f3454b6129c46"
+		},
+		{
+			"ImportPath": "github.com/jmoiron/sqlx",
+			"Comment": "sqlx-v1.0-33-g5cabf07",
+			"Rev": "5cabf073d8951a94453bd7da632b4e80e3d8258b"
+		},
+		{
+			"ImportPath": "github.com/lib/pq",
+			"Rev": "3e0659e626f761e9af7a8bd1c8b6aaea6770495b"
+		},
+		{
+			"ImportPath": "github.com/meatballhat/maybestatic",
+			"Rev": "fa476a05d5e9f5970394ef159d2f6d2cd2fdd622"
+		},
+		{
+			"ImportPath": "github.com/meatballhat/negroni-logrus",
+			"Rev": "d5e114d7a445f7a3652cf807d3f83d5dceb8de26"
+		},
+		{
+			"ImportPath": "github.com/modcloth-labs/schema_ensurer",
+			"Comment": "0.1.0",
+			"Rev": "f6680402abf2d2437a9f547334780411117b76c2"
+		},
+		{
+			"ImportPath": "github.com/modcloth/expvarplus",
+			"Rev": "929f15c89df8ce197a1b822d707fffa4901d98af"
+		}
+	]
+}
